@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5-on-5 Flag Football Play Visualizer</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">5-on-5 Flag Football</p>
+        <h1>Play Visualizer</h1>
+        <p class="intro">
+          Build plays using the <strong>xyzc</strong> number code. Each digit maps to a route for
+          <strong>x</strong>, <strong>y</strong>, <strong>z</strong>, and <strong>c</strong>.
+          The quarterback <strong>q</strong> is shown with a snap and dropback.
+        </p>
+      </div>
+      <div class="code-chip">
+        <span>Current Play</span>
+        <strong id="play-code-badge">2468</strong>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls-panel">
+        <div class="panel-heading">
+          <h2>Play Setup</h2>
+          <p>Choose a formation and assign routes for x, y, z, and c.</p>
+        </div>
+
+        <label class="field-label" for="formation-select">Formation</label>
+        <select id="formation-select">
+          <option value="bunch">Bunch</option>
+          <option value="pro">Pro</option>
+          <option value="trips">Trips</option>
+        </select>
+
+        <div id="bunch-side-group">
+          <label class="field-label" for="bunch-side-toggle">Bunch Z Side</label>
+          <div class="segmented-control" id="bunch-side-toggle" role="group" aria-label="Bunch z alignment side">
+            <button class="segment-button is-active" type="button" data-bunch-side="left">Left</button>
+            <button class="segment-button" type="button" data-bunch-side="right">Right</button>
+          </div>
+          <p class="field-help">Left puts z outside and behind x. Right puts z outside y.</p>
+        </div>
+
+        <label class="field-label" for="play-code-input">Play Code</label>
+        <div class="play-code-row">
+          <input id="play-code-input" type="text" inputmode="numeric" maxlength="4" value="2468" aria-describedby="play-code-help">
+          <button id="random-play-button" type="button">Random</button>
+        </div>
+        <p id="play-code-help" class="field-help">Enter four digits from 0-9 in the order x, y, z, c.</p>
+
+        <div class="route-grid">
+          <label>
+            <span>X Route</span>
+            <select id="route-x"></select>
+          </label>
+          <label>
+            <span>Y Route</span>
+            <select id="route-y"></select>
+          </label>
+          <label>
+            <span>Z Route</span>
+            <select id="route-z"></select>
+          </label>
+          <label>
+            <span>C Route</span>
+            <select id="route-c"></select>
+          </label>
+        </div>
+
+        <div class="quick-plays">
+          <div class="panel-heading compact">
+            <h3>Quick Plays</h3>
+            <p>Tap one to load it instantly.</p>
+          </div>
+          <div class="quick-play-buttons">
+            <button class="quick-play" type="button" data-formation="bunch" data-code="2468">Bunch 2468</button>
+            <button class="quick-play" type="button" data-formation="pro" data-code="9174">Pro 9174</button>
+            <button class="quick-play" type="button" data-formation="trips" data-code="6209">Trips 6209</button>
+            <button class="quick-play" type="button" data-formation="pro" data-code="1347">Pro 1347</button>
+          </div>
+        </div>
+
+        <div class="sequence-builder">
+          <div class="panel-heading compact">
+            <h3>Play Sequences</h3>
+            <p>Save and reuse scripted series of plays in this browser.</p>
+          </div>
+          <label class="field-label" for="sequence-name-input">Sequence Name</label>
+          <input id="sequence-name-input" type="text" maxlength="40" placeholder="Red Zone Script">
+          <div class="sequence-actions">
+            <button id="save-sequence-button" type="button">Save Sequence</button>
+            <button id="add-play-button" type="button">Add Current Play</button>
+          </div>
+          <div id="sequence-status" class="sequence-status" aria-live="polite"></div>
+          <div id="sequence-list" class="sequence-list"></div>
+        </div>
+      </section>
+
+      <div class="visual-stack">
+        <section class="panel field-panel">
+          <div class="panel-heading row">
+            <div>
+              <h2>Field View</h2>
+              <p>Routes are drawn from the selected formation alignment.</p>
+            </div>
+            <button id="export-pptx-button" class="secondary-button" type="button">Export PPTX</button>
+          </div>
+          <svg id="field" viewBox="0 0 1000 600" role="img" aria-label="Flag football play diagram"></svg>
+          <p class="field-help export-help">Exports the current play, or the named saved sequence if the sequence name matches.</p>
+        </section>
+
+        <section class="panel simulation-panel">
+          <div class="panel-heading">
+            <h2>Defense Lab</h2>
+            <p>Heuristic runtime simulator for Cover 2, Cover 3, Cover 4, and Man.</p>
+          </div>
+          <div class="simulation-toolbar">
+            <label>
+              <span class="field-label">Primary Defense</span>
+              <select id="defense-select">
+                <option value="cover2">Cover 2</option>
+                <option value="cover3">Cover 3</option>
+                <option value="cover4">Cover 4</option>
+                <option value="man">Man</option>
+              </select>
+            </label>
+            <div class="simulation-actions">
+              <button id="simulate-button" type="button">Run Simulation</button>
+              <button id="stop-simulation-button" class="secondary-button" type="button">Stop</button>
+            </div>
+          </div>
+          <div id="simulation-status" class="sequence-status" aria-live="polite"></div>
+          <div id="defense-report-grid" class="defense-report-grid"></div>
+        </section>
+      </div>
+    </main>
+
+    <section class="panel legend-panel">
+      <div class="panel-heading">
+        <h2>Route Tree</h2>
+        <p>The number code uses this route mapping.</p>
+      </div>
+      <div id="route-legend" class="route-legend"></div>
+    </section>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
