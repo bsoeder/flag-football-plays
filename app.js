@@ -198,44 +198,6 @@ const playLibrary = [
   libraryPlay({ id: "reverse-starscream-right", name: "Reverse Starscream Right", formation: "pro", type: "trick", code: "9660", concepts: { run: "reverse", fake: "reverse-fake" } }),
 ];
 
-// Preset playbooks built from the pptx index slides: category (3), formation (4), sets (5).
-const presetPlaybookGroups = [
-  {
-    id: "slide3",
-    source: "Slide 3",
-    title: "By Category",
-    description: "Pass, run, and trick books the way the call sheet groups them.",
-    playbooks: [
-      { name: "Pass Plays", plays: ["optimus-prime-2222", "optimus-go-9999", "wheeljack-left-9348", "wheeljack-right-9586", "sideswipe-left-0922", "sideswipe-right-9022"] },
-      { name: "Run Plays", plays: ["optimus-go-run-99run9", "tictactoe-fake-left-90r1", "starscream-left", "starscream-right", "trips-left-54run8", "trips-right-54run8"] },
-      { name: "Tricks", plays: ["reverse-starscream-left", "reverse-starscream-right", "starscream-left-frosting", "uno-reverse-pro", "starscream-left-cheese", "bunch-uno-double-fake-9615"] },
-    ],
-  },
-  {
-    id: "slide4",
-    source: "Slide 4",
-    title: "By Formation",
-    description: "The install grouped by alignment, plus the goal-line package.",
-    playbooks: [
-      { name: "Bunch", plays: ["bunch-starscream-56r9", "bunch-starscream-86fake7", "bunch-starscream-86option9", "bunch-uno-run6fake5", "bunch-pass-left-8626"] },
-      { name: "Pro Formation", plays: ["optimus-prime-2222", "optimus-go-9999", "tictactoe-right-91option1", "tictactoe-motion-8fakeoption1", "sideswipe-left-0922", "sideswipe-right-9022"] },
-      { name: "Trips", plays: ["trips-left-8636", "trips-left-5364", "trips-left-5428", "trips-left-54fake8", "trips-left-54run8", "trips-left-54uno8"] },
-      { name: "Bunch Goal Line", plays: ["bunch-pass-left-8626", "bunch-pass-right-6826", "bunch-6206", "bunch-0261", "bunch-7671", "bunch-2627"] },
-    ],
-  },
-  {
-    id: "slide5",
-    source: "Slide 5",
-    title: "Game-Day Sets",
-    description: "Scripted drive sets ready to call in order.",
-    playbooks: [
-      { name: "Set 1", plays: ["trips-right-8636", "sideswipe-left-0922", "optimus-curl-4444", "option-right-2523", "trips-left-54fake8", "tictactoe-motion-8fakeoption1", "optimus-outs-5578"] },
-      { name: "Set 2", plays: ["trips-right-8636", "trips-right-5428", "wheeljack-left-9348", "option-left-5224", "reverse-starscream-2optionfake9", "bunch-starscream-86fake7", "bunch-pass-5529"] },
-      { name: "Set 3", plays: ["sideswipe-right-9022", "trips-left-8636", "wheeljack-left-9348", "bunch-uno-run6fake5", "bunch-pass-right-6826", "optimus-prime-2222", "option-left-5224"] },
-    ],
-  },
-];
-
 const routePlayers = ["x", "y", "z", "c"];
 const fieldWidth = 1000;
 const fieldHeight = 600;
@@ -360,7 +322,14 @@ const modeViews = Array.from(document.querySelectorAll("[data-mode-view]"));
 const playbookBrowseButtons = Array.from(document.querySelectorAll("[data-browse]"));
 const playbookFilter = document.querySelector("#playbook-filter");
 const playbookGroups = document.querySelector("#playbook-groups");
-const presetPlaybooksContainer = document.querySelector("#preset-playbooks");
+const playFullscreen = document.querySelector("#play-fullscreen");
+const pfName = document.querySelector("#pf-name");
+const pfCode = document.querySelector("#pf-code");
+const pfConcepts = document.querySelector("#pf-concepts");
+const pfField = document.querySelector("#pf-field");
+const pfClose = document.querySelector("#pf-close");
+const pfEdit = document.querySelector("#pf-edit");
+let fullscreenPlay = null;
 
 const routeInputs = {
   x: document.querySelector("#route-x"),
@@ -725,7 +694,9 @@ function persistSequences() {
 }
 
 function setStatus(message) {
-  sequenceStatus.textContent = message;
+  if (sequenceStatus) {
+    sequenceStatus.textContent = message;
+  }
 }
 
 function setSimulationStatus(message) {
@@ -745,6 +716,9 @@ function findNamedSequence() {
 }
 
 function renderSequences() {
+  if (!sequenceList) {
+    return;
+  }
   if (sequences.length === 0) {
     sequenceList.innerHTML = '<p class="field-help">No saved sequences yet.</p>';
     return;
@@ -840,14 +814,22 @@ function playbookThumbnail(play) {
   return svg;
 }
 
-function createPlaybookCard(play) {
+function createPlaybookCard(play, groupKey) {
   const card = document.createElement("article");
   card.className = "playbook-card";
+  card.setAttribute("role", "button");
+  card.setAttribute("tabindex", "0");
+  card.title = `Open ${play.name} in the studio`;
 
   const thumb = document.createElement("div");
   thumb.className = "playbook-thumb-shell";
   thumb.appendChild(playbookThumbnail(play));
   card.appendChild(thumb);
+
+  // Show only the badge for the dimension you are NOT grouping by, to keep cards short.
+  const badge = groupKey === "type"
+    ? `<span class="playbook-badge" data-badge="formation">${escapeHtml(formationLibrary[play.formation].label)}</span>`
+    : `<span class="playbook-badge" data-badge="type">${escapeHtml(playTypeLibrary[play.type].label)}</span>`;
 
   const body = document.createElement("div");
   body.className = "playbook-card-body";
@@ -856,21 +838,22 @@ function createPlaybookCard(play) {
       <strong>${escapeHtml(play.name)}</strong>
       <span class="playbook-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
     </div>
-    <div class="playbook-badges">
-      <span class="playbook-badge" data-badge="formation">${escapeHtml(formationLibrary[play.formation].label)}</span>
-      <span class="playbook-badge" data-badge="type">${escapeHtml(playTypeLibrary[play.type].label)}</span>
+    <div class="playbook-meta">
+      ${badge}
+      <span class="playbook-card-note">${escapeHtml(formatConceptSummary(play.concepts))}</span>
     </div>
-    <p class="playbook-card-note">${escapeHtml(formatConceptSummary(play.concepts))}</p>
   `;
-
-  const openButton = document.createElement("button");
-  openButton.type = "button";
-  openButton.className = "playbook-open";
-  openButton.textContent = "Open in Studio";
-  openButton.addEventListener("click", () => openLibraryPlay(play.id));
-  body.appendChild(openButton);
-
   card.appendChild(body);
+
+  const open = () => openLibraryPlay(play.id);
+  card.addEventListener("click", open);
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+
   return card;
 }
 
@@ -910,7 +893,7 @@ function renderPlaybookLibrary() {
 
     const grid = document.createElement("div");
     grid.className = "playbook-card-grid";
-    plays.forEach((play) => grid.appendChild(createPlaybookCard(play)));
+    plays.forEach((play) => grid.appendChild(createPlaybookCard(play, key)));
     group.appendChild(grid);
     playbookGroups.appendChild(group);
   });
@@ -921,86 +904,45 @@ function openLibraryPlay(id) {
   if (!play) {
     return;
   }
+  openPlayFullscreen(play);
+}
+
+function openPlayFullscreen(play) {
+  if (!playFullscreen) {
+    return;
+  }
+
+  fullscreenPlay = play;
+  const snapshot = normalizeSnapshot(play);
+  pfName.textContent = play.name;
+  pfCode.textContent = snapshot.code;
+  pfConcepts.textContent = formatConceptSummary(snapshot.concepts);
+  renderField(pfField, snapshot);
+
+  // A fixed, viewport-filling overlay is the reliable "full screen" across devices —
+  // iOS Safari (the iPad target) does not support Element.requestFullscreen.
+  playFullscreen.classList.remove("is-hidden");
+  document.body.classList.add("is-fullscreen-open");
+  pfClose?.focus();
+}
+
+function closePlayFullscreen() {
+  if (!playFullscreen) {
+    return;
+  }
+  fullscreenPlay = null;
+  playFullscreen.classList.add("is-hidden");
+  document.body.classList.remove("is-fullscreen-open");
+}
+
+function editFullscreenPlay() {
+  if (!fullscreenPlay) {
+    return;
+  }
+  const play = fullscreenPlay;
+  closePlayFullscreen();
   applySnapshot(play);
   setActiveMode("compose");
-  setStatus(`Loaded ${play.name} into the studio.`);
-}
-
-function findLibraryPlay(id) {
-  return playLibrary.find((entry) => entry.id === id) || null;
-}
-
-function presetPlaybookPlays(playbook) {
-  return playbook.plays.map(findLibraryPlay).filter(Boolean);
-}
-
-function renderPresetPlaybooks() {
-  if (!presetPlaybooksContainer) {
-    return;
-  }
-
-  presetPlaybooksContainer.innerHTML = presetPlaybookGroups
-    .map(
-      (group) => `
-        <section class="preset-group">
-          <div class="preset-group-header">
-            <div>
-              <h3>${escapeHtml(group.title)}</h3>
-              <p>${escapeHtml(group.description)}</p>
-            </div>
-            <span class="preset-source">${escapeHtml(group.source)}</span>
-          </div>
-          ${group.playbooks
-            .map((playbook, index) => {
-              const plays = presetPlaybookPlays(playbook);
-              const codes = plays
-                .map((play) => `<span class="preset-code">${escapeHtml(normalizeSnapshot(play).code)}</span>`)
-                .join("");
-              return `
-                <div class="preset-card">
-                  <div class="preset-card-head">
-                    <strong>${escapeHtml(playbook.name)}</strong>
-                    <span class="preset-count">${plays.length} play${plays.length === 1 ? "" : "s"}</span>
-                  </div>
-                  <div class="preset-codes">${codes}</div>
-                  <button class="preset-load" type="button" data-preset="${group.id}:${index}">Load to My Playbooks</button>
-                </div>
-              `;
-            })
-            .join("")}
-        </section>
-      `,
-    )
-    .join("");
-
-  presetPlaybooksContainer.querySelectorAll("[data-preset]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const [groupId, indexRaw] = button.dataset.preset.split(":");
-      loadPresetPlaybook(groupId, Number(indexRaw));
-    });
-  });
-}
-
-function loadPresetPlaybook(groupId, index) {
-  const group = presetPlaybookGroups.find((entry) => entry.id === groupId);
-  const playbook = group?.playbooks[index];
-  if (!playbook) {
-    return;
-  }
-
-  const plays = presetPlaybookPlays(playbook).map((play) => normalizeSnapshot(play));
-  const name = playbook.name;
-  const existing = sequences.find((sequence) => sequence.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    existing.plays = plays;
-  } else {
-    sequences.unshift({ name, plays });
-  }
-
-  persistSequences();
-  renderSequences();
-  sequenceNameInput.value = name;
-  setStatus(`Loaded ${name} (${plays.length} plays) into My Playbooks.`);
 }
 
 function buildRouteOptions() {
@@ -2149,44 +2091,19 @@ function bindEvents() {
     });
   });
 
-  saveSequenceButton.addEventListener("click", () => {
-    const name = sanitizeSequenceName(sequenceNameInput.value);
-    if (!name) {
-      setStatus("Enter a sequence name before saving.");
-      return;
-    }
-
-    const existing = sequences.find((sequence) => sequence.name.toLowerCase() === name.toLowerCase());
-    if (existing) {
-      existing.plays = [currentPlaySnapshot()];
-      setStatus(`Replaced ${name} with the current play.`);
-    } else {
-      sequences.unshift({ name, plays: [currentPlaySnapshot()] });
-      setStatus(`Saved ${name}.`);
-    }
-
-    persistSequences();
-    renderSequences();
-  });
-
-  addPlayButton.addEventListener("click", () => {
-    const name = sanitizeSequenceName(sequenceNameInput.value);
-    if (!name) {
-      setStatus("Enter a sequence name before adding a play.");
-      return;
-    }
-
-    let sequence = sequences.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
-    if (!sequence) {
-      sequence = { name, plays: [] };
-      sequences.unshift(sequence);
-    }
-
-    sequence.plays.push(currentPlaySnapshot());
-    persistSequences();
-    renderSequences();
-    setStatus(`Added play ${sequence.plays.length} to ${sequence.name}.`);
-  });
+  if (pfClose) {
+    pfClose.addEventListener("click", closePlayFullscreen);
+  }
+  if (pfEdit) {
+    pfEdit.addEventListener("click", editFullscreenPlay);
+  }
+  if (playFullscreen) {
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !playFullscreen.classList.contains("is-hidden")) {
+        closePlayFullscreen();
+      }
+    });
+  }
 
   defenseSelect.addEventListener("change", render);
   simulateButton.addEventListener("click", startSimulation);
@@ -2860,8 +2777,6 @@ buildLegend();
 bindEvents();
 syncSelectorsFromCode(getPlayCode());
 applyConcepts({});
-renderSequences();
 renderPlaybookLibrary();
-renderPresetPlaybooks();
 registerAppShell();
 render();

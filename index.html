@@ -204,7 +204,7 @@
             <div class="playbook-heading-copy">
               <p class="stage-kicker">Team Playbook</p>
               <h2>Playbook Library</h2>
-              <p class="intro">Browse the base install by formation or by play type, then tap any card to open it in the studio.</p>
+              <p class="intro">Browse the base install by formation or by play type, then tap any card to view the play full screen.</p>
             </div>
             <div class="browse-toggle-wrap">
               <span class="field-label">Browse by</span>
@@ -217,33 +217,27 @@
           <div class="playbook-filter" id="playbook-filter" role="group" aria-label="Filter plays"></div>
           <div class="playbook-groups" id="playbook-groups"></div>
         </div>
-
-        <div class="playbook-side">
-          <div class="panel preset-playbooks-panel">
-            <div class="panel-heading">
-              <h2>Team Playbooks</h2>
-              <p>Ready-made books from the call sheet. Tap Load to copy one into My Playbooks.</p>
-            </div>
-            <div id="preset-playbooks" class="preset-playbooks"></div>
-          </div>
-
-          <div class="panel saved-playbooks-panel">
-            <div class="panel-heading">
-              <h2>My Playbooks</h2>
-              <p>Save the current call, build multi-play scripts, and load them back into the field board.</p>
-            </div>
-            <label class="field-label" for="sequence-name-input">Playbook Name</label>
-            <input id="sequence-name-input" type="text" maxlength="40" placeholder="Red Zone Script">
-            <div class="sequence-actions">
-              <button id="save-sequence-button" type="button">Save Playbook</button>
-              <button id="add-play-button" type="button">Add Current Play</button>
-            </div>
-            <div id="sequence-status" class="sequence-status" aria-live="polite"></div>
-            <div id="sequence-list" class="sequence-list"></div>
-          </div>
-        </div>
       </section>
     </main>
+  </div>
+
+  <div id="play-fullscreen" class="play-fullscreen is-hidden" role="dialog" aria-modal="true" aria-label="Play view">
+    <div class="pf-topbar">
+      <div class="pf-title">
+        <h2 id="pf-name">Play</h2>
+        <div class="pf-meta">
+          <span id="pf-code" class="pf-code"></span>
+          <span id="pf-concepts" class="pf-concepts"></span>
+        </div>
+      </div>
+      <div class="pf-actions">
+        <button id="pf-edit" class="secondary-button" type="button">Edit in Studio</button>
+        <button id="pf-close" type="button">Close</button>
+      </div>
+    </div>
+    <div class="pf-stage">
+      <svg id="pf-field" viewBox="0 0 1000 600" role="img" aria-label="Play diagram"></svg>
+    </div>
   </div>
 
   <script src="./app.js"></script>
