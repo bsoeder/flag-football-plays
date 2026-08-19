@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#214432"/>
+      <stop offset="100%" stop-color="#132a1e"/>
+    </linearGradient>
+    <linearGradient id="field" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d7f4d"/>
+      <stop offset="100%" stop-color="#1e6a3d"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="52" y="84" width="408" height="344" rx="48" fill="url(#field)" stroke="#fff7eb" stroke-opacity=".2" stroke-width="8"/>
+  <path d="M140 120v272M212 120v272M300 120v272M372 120v272" stroke="#fff7eb" stroke-opacity=".18" stroke-width="8"/>
+  <path d="M118 300H394" stroke="#fff7eb" stroke-opacity=".34" stroke-width="10" stroke-dasharray="18 14"/>
+  <path d="M180 324L180 216L102 168" fill="none" stroke="#ffeb7a" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M180 324L180 216L246 156" fill="none" stroke="#76c5ff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 388L256 264L330 196" fill="none" stroke="#9ad87c" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="396" r="28" fill="#c74f2d" stroke="#fff7eb" stroke-width="10"/>
+  <text x="256" y="406" text-anchor="middle" font-family="Impact, Haettenschweiler, Arial Narrow Bold, sans-serif" font-size="42" fill="#fff7eb">Q</text>
+</svg>

@@ -1,0 +1,285 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* FlagFootballPlaysPadApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000002 /* FlagFootballPlaysPadApp.swift */; };
+		AA000002 /* PlaybookWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000003 /* PlaybookWebView.swift */; };
+		AA000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB000005 /* Assets.xcassets */; };
+		AA000004 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = AB000006 /* index.html */; };
+		AA000005 /* app.js in Resources */ = {isa = PBXBuildFile; fileRef = AB000007 /* app.js */; };
+		AA000006 /* styles.css in Resources */ = {isa = PBXBuildFile; fileRef = AB000008 /* styles.css */; };
+		AA000007 /* manifest.webmanifest in Resources */ = {isa = PBXBuildFile; fileRef = AB000009 /* manifest.webmanifest */; };
+		AA000008 /* sw.js in Resources */ = {isa = PBXBuildFile; fileRef = AB00000A /* sw.js */; };
+		AA000009 /* app-icon.svg in Resources */ = {isa = PBXBuildFile; fileRef = AB00000B /* app-icon.svg */; };
+		AA00000A /* apple-touch-icon.png in Resources */ = {isa = PBXBuildFile; fileRef = AB00000C /* apple-touch-icon.png */; };
+		AA00000B /* icon-192.png in Resources */ = {isa = PBXBuildFile; fileRef = AB00000D /* icon-192.png */; };
+		AA00000C /* icon-512.png in Resources */ = {isa = PBXBuildFile; fileRef = AB00000E /* icon-512.png */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AB000001 /* FlagFootballPlaysPad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlagFootballPlaysPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB000002 /* FlagFootballPlaysPadApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlagFootballPlaysPadApp.swift; sourceTree = "<group>"; };
+		AB000003 /* PlaybookWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybookWebView.swift; sourceTree = "<group>"; };
+		AB000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AB000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB000006 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = ../index.html; sourceTree = SOURCE_ROOT; };
+		AB000007 /* app.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../app.js; sourceTree = SOURCE_ROOT; };
+		AB000008 /* styles.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = ../styles.css; sourceTree = SOURCE_ROOT; };
+		AB000009 /* manifest.webmanifest */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ../manifest.webmanifest; sourceTree = SOURCE_ROOT; };
+		AB00000A /* sw.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = ../sw.js; sourceTree = SOURCE_ROOT; };
+		AB00000B /* app-icon.svg */ = {isa = PBXFileReference; lastKnownFileType = image.svg; path = ../app-icon.svg; sourceTree = SOURCE_ROOT; };
+		AB00000C /* apple-touch-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "../apple-touch-icon.png"; sourceTree = SOURCE_ROOT; };
+		AB00000D /* icon-192.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ../icon-192.png; sourceTree = SOURCE_ROOT; };
+		AB00000E /* icon-512.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ../icon-512.png; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AD000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC000001 = {
+			isa = PBXGroup;
+			children = (
+				AC000002 /* FlagFootballPlaysPad */,
+				AC000003 /* Bundled Web Assets */,
+				AC000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC000002 /* FlagFootballPlaysPad */ = {
+			isa = PBXGroup;
+			children = (
+				AB000002 /* FlagFootballPlaysPadApp.swift */,
+				AB000003 /* PlaybookWebView.swift */,
+				AB000004 /* Info.plist */,
+				AB000005 /* Assets.xcassets */,
+			);
+			path = FlagFootballPlaysPad;
+			sourceTree = "<group>";
+		};
+		AC000003 /* Bundled Web Assets */ = {
+			isa = PBXGroup;
+			children = (
+				AB000006 /* index.html */,
+				AB000007 /* app.js */,
+				AB000008 /* styles.css */,
+				AB000009 /* manifest.webmanifest */,
+				AB00000A /* sw.js */,
+				AB00000B /* app-icon.svg */,
+				AB00000C /* apple-touch-icon.png */,
+				AB00000D /* icon-192.png */,
+				AB00000E /* icon-512.png */,
+			);
+			name = "Bundled Web Assets";
+			sourceTree = "<group>";
+		};
+		AC000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AB000001 /* FlagFootballPlaysPad.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AE000001 /* FlagFootballPlaysPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B0000006 /* Build configuration list for PBXNativeTarget "FlagFootballPlaysPad" */;
+			buildPhases = (
+				AD000001 /* Sources */,
+				AD000002 /* Frameworks */,
+				AD000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FlagFootballPlaysPad;
+			productName = FlagFootballPlaysPad;
+			productReference = AB000001 /* FlagFootballPlaysPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AF000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AE000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = B0000005 /* Build configuration list for PBXProject "FlagFootballPlaysPad" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AC000001;
+			productRefGroup = AC000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AE000001 /* FlagFootballPlaysPad */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AD000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000003 /* Assets.xcassets in Resources */,
+				AA000004 /* index.html in Resources */,
+				AA000005 /* app.js in Resources */,
+				AA000006 /* styles.css in Resources */,
+				AA000007 /* manifest.webmanifest in Resources */,
+				AA000008 /* sw.js in Resources */,
+				AA000009 /* app-icon.svg in Resources */,
+				AA00000A /* apple-touch-icon.png in Resources */,
+				AA00000B /* icon-192.png in Resources */,
+				AA00000C /* icon-512.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AD000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* FlagFootballPlaysPadApp.swift in Sources */,
+				AA000002 /* PlaybookWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B0000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		B0000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		B0000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FlagFootballPlaysPad/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.flagfootballplayspad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		B0000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FlagFootballPlaysPad/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.flagfootballplayspad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B0000005 /* Build configuration list for PBXProject "FlagFootballPlaysPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0000001 /* Debug */,
+				B0000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B0000006 /* Build configuration list for PBXNativeTarget "FlagFootballPlaysPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0000003 /* Debug */,
+				B0000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AF000001 /* Project object */;
+}

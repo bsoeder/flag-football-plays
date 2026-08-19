@@ -11,6 +11,238 @@ const routeTree = {
   9: "Go",
 };
 
+const conceptLibrary = {
+  run: {
+    none: {
+      label: "No Run",
+      shortLabel: "Routes Only",
+      description: "Keep the call built around the route concept only.",
+    },
+    "qb-draw": {
+      label: "QB Draw",
+      shortLabel: "QB Draw",
+      description: "Quarterback plants and attacks vertically through the middle.",
+    },
+    "c-dive": {
+      label: "Center Dive",
+      shortLabel: "Center Dive",
+      description: "Fast inside handoff working downhill through the A gap.",
+    },
+    "jet-left": {
+      label: "Jet Sweep Left",
+      shortLabel: "Jet Left",
+      description: "Orbit motion to the left edge for a speed sweep look.",
+    },
+    "jet-right": {
+      label: "Jet Sweep Right",
+      shortLabel: "Jet Right",
+      description: "Jet action racing to the right edge for outside leverage.",
+    },
+    reverse: {
+      label: "Reverse",
+      shortLabel: "Reverse",
+      description: "Ball action bends back across the formation after misdirection.",
+    },
+  },
+  fake: {
+    none: {
+      label: "No Fake",
+      shortLabel: "No Fake",
+      description: "Keep the backfield clean without eye-candy action.",
+    },
+    "play-action": {
+      label: "Play Action",
+      shortLabel: "Play Action",
+      description: "Sell an inside handoff before settling into the pass look.",
+    },
+    "jet-fake-left": {
+      label: "Jet Fake Left",
+      shortLabel: "Jet Fake L",
+      description: "Flash motion left to pull eyes and force lateral flow.",
+    },
+    "jet-fake-right": {
+      label: "Jet Fake Right",
+      shortLabel: "Jet Fake R",
+      description: "Send motion right to widen leverage before the snap look develops.",
+    },
+    "reverse-fake": {
+      label: "Reverse Fake",
+      shortLabel: "Reverse Fake",
+      description: "Show reverse action behind the quarterback before the real play hits.",
+    },
+  },
+  option: {
+    none: {
+      label: "No Option",
+      shortLabel: "No Option",
+      description: "Keep a single post-snap answer without branching choices.",
+    },
+    "read-left": {
+      label: "Read Option Left",
+      shortLabel: "Read L",
+      description: "Mesh with a left-side read and let the quarterback keep or give.",
+    },
+    "read-right": {
+      label: "Read Option Right",
+      shortLabel: "Read R",
+      description: "Read the right edge and branch the ball path off the mesh.",
+    },
+    "speed-left": {
+      label: "Speed Option Left",
+      shortLabel: "Speed L",
+      description: "Attack the left flank with a keep-or-pitch option structure.",
+    },
+    "speed-right": {
+      label: "Speed Option Right",
+      shortLabel: "Speed R",
+      description: "Stress the right edge with a speed-option pitch relationship.",
+    },
+    "rpo-bubble": {
+      label: "RPO Bubble",
+      shortLabel: "RPO Bubble",
+      description: "Pair a run mesh with a quick bubble answer outside.",
+    },
+  },
+};
+
+const modeDescriptions = {
+  compose: "Compose routes, runs, fakes, and options on the field.",
+  playbooks: "Save the current call or pull a playbook into the field board.",
+  simulation: "Review leverage and coverage fit against your selected defense.",
+};
+
+const formationLibrary = {
+  bunch: { label: "Bunch", description: "Condensed stack creating natural rubs, picks, and quick throws." },
+  pro: { label: "Pro", description: "Balanced Optimus / Tic Tac Toe / Wheeljack looks with backfield flex." },
+  trips: { label: "Trips", description: "Three-strong surface (left or right) to flood one side." },
+};
+
+const playTypeLibrary = {
+  pass: { label: "Pass", description: "Base dropback and rhythm throws off the route call." },
+  run: { label: "Run", description: "Downhill and perimeter runs off the base call." },
+  option: { label: "Option", description: "Post-snap reads that branch keep, throw, or pitch." },
+  trick: { label: "Trick", description: "Reverses, Uno, and Starscream misdirection specials." },
+  goalline: { label: "Goal Line", description: "Condensed red-zone and goal-line calls." },
+};
+
+// Plays imported from the Spring/Fall 2026 Seahawks 5/6 playbook (pptx slides 11-71).
+// Four-digit codes follow the team's x-y-z-c order; concept letters in the source
+// (Run / Fake / Option / Uno) are layered on as run, fake, and option concepts.
+function libraryPlay(config) {
+  return {
+    bunchSide: "left",
+    proMotion: "stay",
+    ...config,
+    concepts: { run: "none", fake: "none", option: "none", ...(config.concepts || {}) },
+  };
+}
+
+const playLibrary = [
+  // ----- Bunch (slides 11-22, 46-50) -----
+  libraryPlay({ id: "bunch-starscream-56r9", name: "Bunch Starscream", formation: "bunch", type: "trick", code: "5609", concepts: { run: "jet-right" } }),
+  libraryPlay({ id: "bunch-starscream-86fake7", name: "Bunch Starscream (Fake)", formation: "bunch", type: "trick", code: "8687", concepts: { fake: "play-action" } }),
+  libraryPlay({ id: "bunch-starscream-86option9", name: "Bunch Starscream Option", formation: "bunch", type: "option", code: "8679", concepts: { option: "read-right" } }),
+  libraryPlay({ id: "bunch-option-open-right", name: "Bunch Option Open Right", formation: "bunch", type: "option", code: "8679", bunchSide: "right", concepts: { option: "read-right" } }),
+  libraryPlay({ id: "bunch-uno-run6fake5", name: "Bunch Uno", formation: "bunch", type: "trick", code: "0685", concepts: { run: "reverse", fake: "reverse-fake" } }),
+  libraryPlay({ id: "bunch-uno-double-fake-9615", name: "Bunch Uno Double Fake", formation: "bunch", type: "trick", code: "9615", concepts: { run: "reverse", fake: "reverse-fake" } }),
+  libraryPlay({ id: "bunch-pass-left-8626", name: "Bunch Pass Left", formation: "bunch", type: "pass", code: "8626", bunchSide: "left" }),
+  libraryPlay({ id: "bunch-pass-right-6826", name: "Bunch Pass Right", formation: "bunch", type: "pass", code: "6826", bunchSide: "right" }),
+  libraryPlay({ id: "bunch-pass-5529", name: "Bunch Pass 5529", formation: "bunch", type: "pass", code: "5529" }),
+  libraryPlay({ id: "bunch-6206", name: "Bunch 6206", formation: "bunch", type: "goalline", code: "6206" }),
+  libraryPlay({ id: "bunch-6208", name: "Bunch 6208", formation: "bunch", type: "goalline", code: "6208" }),
+  libraryPlay({ id: "bunch-0261", name: "Bunch 0261", formation: "bunch", type: "goalline", code: "0261" }),
+  libraryPlay({ id: "bunch-7671", name: "Bunch 7671", formation: "bunch", type: "goalline", code: "7671" }),
+  libraryPlay({ id: "bunch-2627", name: "Bunch 2627", formation: "bunch", type: "goalline", code: "2627" }),
+
+  // ----- Pro (slides 24-45) -----
+  libraryPlay({ id: "optimus-prime-2222", name: "Optimus Prime", formation: "pro", type: "pass", code: "2222" }),
+  libraryPlay({ id: "optimus-go-9999", name: "Optimus Go", formation: "pro", type: "pass", code: "9999" }),
+  libraryPlay({ id: "optimus-go-run-99run9", name: "Optimus Go Run", formation: "pro", type: "run", code: "9909", concepts: { run: "qb-draw" } }),
+  libraryPlay({ id: "optimus-curl-4444", name: "Optimus Curl", formation: "pro", type: "pass", code: "4444" }),
+  libraryPlay({ id: "optimus-curl-fake-4424", name: "Optimus Curl Fake", formation: "pro", type: "pass", code: "4424", concepts: { fake: "play-action" } }),
+  libraryPlay({ id: "optimus-outs-5578", name: "Optimus Outs", formation: "pro", type: "pass", code: "5578" }),
+  libraryPlay({ id: "tictactoe-fake-left-90r1", name: "Tic Tac Toe Fake Left", formation: "pro", type: "run", code: "9001", proMotion: "left", concepts: { run: "c-dive", fake: "play-action" } }),
+  libraryPlay({ id: "tictactoe-right-91option1", name: "Tic Tac Toe Right", formation: "pro", type: "option", code: "9171", concepts: { option: "read-right" } }),
+  libraryPlay({ id: "tictactoe-motion-8fakeoption1", name: "Tic Tac Toe Motion Option", formation: "pro", type: "option", code: "8871", proMotion: "right", concepts: { fake: "play-action", option: "read-right" } }),
+  libraryPlay({ id: "tictactoe-motion-8fakefake1", name: "Tic Tac Toe Motion Double Fake", formation: "pro", type: "trick", code: "8881", proMotion: "left", concepts: { fake: "play-action" } }),
+  libraryPlay({ id: "double-sideswipe-0022", name: "Double Sideswipe", formation: "pro", type: "pass", code: "0022" }),
+  libraryPlay({ id: "sideswipe-left-0922", name: "Sideswipe Left", formation: "pro", type: "pass", code: "0922" }),
+  libraryPlay({ id: "sideswipe-right-9022", name: "Sideswipe Right", formation: "pro", type: "pass", code: "9022" }),
+  libraryPlay({ id: "wheeljack-left-9348", name: "Wheeljack Left", formation: "pro", type: "pass", code: "9348", proMotion: "left" }),
+  libraryPlay({ id: "wheeljack-sideswipe-9048", name: "Wheeljack Sideswipe", formation: "pro", type: "pass", code: "9048", proMotion: "left" }),
+  libraryPlay({ id: "wheeljack-right-9586", name: "Wheeljack Right", formation: "pro", type: "pass", code: "9586", proMotion: "right" }),
+  libraryPlay({ id: "option-left-5224", name: "Option Left", formation: "pro", type: "option", code: "5224", concepts: { option: "speed-left" } }),
+  libraryPlay({ id: "option-right-2523", name: "Option Right", formation: "pro", type: "option", code: "2523", concepts: { option: "speed-right" } }),
+  libraryPlay({ id: "reverse-starscream-2optionfake9", name: "Reverse Starscream", formation: "pro", type: "trick", code: "2789", concepts: { run: "reverse", fake: "reverse-fake", option: "read-right" } }),
+  libraryPlay({ id: "uno-reverse-pro", name: "Uno Reverse", formation: "pro", type: "trick", code: "0660", concepts: { run: "reverse", fake: "reverse-fake" } }),
+
+  // ----- Trips left/right (slides 52-62) -----
+  libraryPlay({ id: "trips-left-8636", name: "Trips Left 8636", formation: "trips", type: "pass", code: "8636" }),
+  libraryPlay({ id: "trips-right-8636", name: "Trips Right 8636", formation: "trips", type: "pass", code: "8636" }),
+  libraryPlay({ id: "trips-left-5364", name: "Trips Left 5364", formation: "trips", type: "pass", code: "5364" }),
+  libraryPlay({ id: "trips-right-5364", name: "Trips Right 5364", formation: "trips", type: "pass", code: "5364" }),
+  libraryPlay({ id: "trips-left-5428", name: "Trips Left 5428", formation: "trips", type: "pass", code: "5428" }),
+  libraryPlay({ id: "trips-right-5428", name: "Trips Right 5428", formation: "trips", type: "pass", code: "5428" }),
+  libraryPlay({ id: "trips-left-54fake8", name: "Trips Left 54 Fake 8", formation: "trips", type: "pass", code: "5488", concepts: { fake: "play-action" } }),
+  libraryPlay({ id: "trips-right-54fake8", name: "Trips Right 54 Fake 8", formation: "trips", type: "pass", code: "5488", concepts: { fake: "play-action" } }),
+  libraryPlay({ id: "trips-left-54uno8", name: "Trips Left 54 Uno 8", formation: "trips", type: "trick", code: "5408", concepts: { run: "reverse", fake: "reverse-fake" } }),
+  libraryPlay({ id: "trips-left-54run8", name: "Trips Left 54 Run 8", formation: "trips", type: "run", code: "5408", concepts: { run: "c-dive" } }),
+  libraryPlay({ id: "trips-right-54run8", name: "Trips Right 54 Run 8", formation: "trips", type: "run", code: "5408", concepts: { run: "c-dive" } }),
+
+  // ----- Offense specials (slides 64-71) -----
+  libraryPlay({ id: "starscream-left", name: "Starscream Left", formation: "pro", type: "trick", code: "5609", concepts: { run: "jet-left" } }),
+  libraryPlay({ id: "starscream-left-frosting", name: "Starscream Left with Frosting", formation: "pro", type: "trick", code: "5689", concepts: { run: "jet-left", fake: "play-action" } }),
+  libraryPlay({ id: "starscream-left-cheese", name: "Starscream Left with Cheese", formation: "pro", type: "trick", code: "5620", concepts: { fake: "jet-fake-left" } }),
+  libraryPlay({ id: "reverse-starscream-left", name: "Reverse Starscream Left", formation: "pro", type: "trick", code: "0669", concepts: { run: "reverse", fake: "reverse-fake" } }),
+  libraryPlay({ id: "starscream-right", name: "Starscream Right", formation: "pro", type: "trick", code: "9605", concepts: { run: "jet-right" } }),
+  libraryPlay({ id: "reverse-starscream-right", name: "Reverse Starscream Right", formation: "pro", type: "trick", code: "9660", concepts: { run: "reverse", fake: "reverse-fake" } }),
+];
+
+// Preset playbooks built from the pptx index slides: category (3), formation (4), sets (5).
+const presetPlaybookGroups = [
+  {
+    id: "slide3",
+    source: "Slide 3",
+    title: "By Category",
+    description: "Pass, run, and trick books the way the call sheet groups them.",
+    playbooks: [
+      { name: "Pass Plays", plays: ["optimus-prime-2222", "optimus-go-9999", "wheeljack-left-9348", "wheeljack-right-9586", "sideswipe-left-0922", "sideswipe-right-9022"] },
+      { name: "Run Plays", plays: ["optimus-go-run-99run9", "tictactoe-fake-left-90r1", "starscream-left", "starscream-right", "trips-left-54run8", "trips-right-54run8"] },
+      { name: "Tricks", plays: ["reverse-starscream-left", "reverse-starscream-right", "starscream-left-frosting", "uno-reverse-pro", "starscream-left-cheese", "bunch-uno-double-fake-9615"] },
+    ],
+  },
+  {
+    id: "slide4",
+    source: "Slide 4",
+    title: "By Formation",
+    description: "The install grouped by alignment, plus the goal-line package.",
+    playbooks: [
+      { name: "Bunch", plays: ["bunch-starscream-56r9", "bunch-starscream-86fake7", "bunch-starscream-86option9", "bunch-uno-run6fake5", "bunch-pass-left-8626"] },
+      { name: "Pro Formation", plays: ["optimus-prime-2222", "optimus-go-9999", "tictactoe-right-91option1", "tictactoe-motion-8fakeoption1", "sideswipe-left-0922", "sideswipe-right-9022"] },
+      { name: "Trips", plays: ["trips-left-8636", "trips-left-5364", "trips-left-5428", "trips-left-54fake8", "trips-left-54run8", "trips-left-54uno8"] },
+      { name: "Bunch Goal Line", plays: ["bunch-pass-left-8626", "bunch-pass-right-6826", "bunch-6206", "bunch-0261", "bunch-7671", "bunch-2627"] },
+    ],
+  },
+  {
+    id: "slide5",
+    source: "Slide 5",
+    title: "Game-Day Sets",
+    description: "Scripted drive sets ready to call in order.",
+    playbooks: [
+      { name: "Set 1", plays: ["trips-right-8636", "sideswipe-left-0922", "optimus-curl-4444", "option-right-2523", "trips-left-54fake8", "tictactoe-motion-8fakeoption1", "optimus-outs-5578"] },
+      { name: "Set 2", plays: ["trips-right-8636", "trips-right-5428", "wheeljack-left-9348", "option-left-5224", "reverse-starscream-2optionfake9", "bunch-starscream-86fake7", "bunch-pass-5529"] },
+      { name: "Set 3", plays: ["sideswipe-right-9022", "trips-left-8636", "wheeljack-left-9348", "bunch-uno-run6fake5", "bunch-pass-right-6826", "optimus-prime-2222", "option-left-5224"] },
+    ],
+  },
+];
+
+const routePlayers = ["x", "y", "z", "c"];
+const fieldWidth = 1000;
+const fieldHeight = 600;
+const fieldAspectRatio = fieldWidth / fieldHeight;
+const zoomStep = 0.82;
+const minViewportWidth = 280;
+
 const playerColors = {
   x: "#000080",
   y: "#008000",
@@ -26,13 +258,19 @@ const defenseColors = {
   man: "#ffb4a2",
 };
 
+const conceptColors = {
+  run: "#9ad87c",
+  fake: "#f0a35d",
+  option: "#76c5ff",
+};
+
 const formations = {
   pro: {
-    x: { x: 180, y: 410 },
-    y: { x: 360, y: 410 },
-    z: { x: 820, y: 410 },
+    x: { x: 220, y: 410 },
+    y: { x: 780, y: 410 },
+    z: { x: 500, y: 546 },
     c: { x: 500, y: 410 },
-    q: { x: 500, y: 500 },
+    q: { x: 500, y: 498 },
   },
   trips: {
     x: { x: 260, y: 410 },
@@ -64,10 +302,41 @@ const defenseDescriptions = {
   man: "Matches bodies directly and punishes routes that cannot separate.",
 };
 
+const conceptBonuses = {
+  run: {
+    "qb-draw": { cover2: 6, cover3: 8, cover4: 12, man: 5 },
+    "c-dive": { cover2: 4, cover3: 7, cover4: 10, man: 3 },
+    "jet-left": { cover2: 8, cover3: 5, cover4: 4, man: 7 },
+    "jet-right": { cover2: 8, cover3: 5, cover4: 4, man: 7 },
+    reverse: { cover2: 7, cover3: 10, cover4: 6, man: 8 },
+  },
+  fake: {
+    "play-action": { cover2: 5, cover3: 8, cover4: 10, man: 4 },
+    "jet-fake-left": { cover2: 6, cover3: 7, cover4: 5, man: 6 },
+    "jet-fake-right": { cover2: 6, cover3: 7, cover4: 5, man: 6 },
+    "reverse-fake": { cover2: 5, cover3: 9, cover4: 6, man: 7 },
+  },
+  option: {
+    "read-left": { cover2: 6, cover3: 8, cover4: 9, man: 5 },
+    "read-right": { cover2: 6, cover3: 8, cover4: 9, man: 5 },
+    "speed-left": { cover2: 8, cover3: 6, cover4: 5, man: 7 },
+    "speed-right": { cover2: 8, cover3: 6, cover4: 5, man: 7 },
+    "rpo-bubble": { cover2: 9, cover3: 8, cover4: 6, man: 4 },
+  },
+};
+
 const formationSelect = document.querySelector("#formation-select");
 const playCodeInput = document.querySelector("#play-code-input");
 const playCodeBadge = document.querySelector("#play-code-badge");
+const currentPlayTitle = document.querySelector("#current-play-title");
+const currentPlayConcepts = document.querySelector("#current-play-concepts");
+const stageSubtitle = document.querySelector("#stage-subtitle");
 const randomPlayButton = document.querySelector("#random-play-button");
+const zoomOutButton = document.querySelector("#zoom-out-button");
+const zoomInButton = document.querySelector("#zoom-in-button");
+const resetViewButton = document.querySelector("#reset-view-button");
+const resetRoutesButton = document.querySelector("#reset-routes-button");
+const exportSvgButton = document.querySelector("#export-svg-button");
 const exportPptxButton = document.querySelector("#export-pptx-button");
 const defenseSelect = document.querySelector("#defense-select");
 const simulateButton = document.querySelector("#simulate-button");
@@ -76,13 +345,22 @@ const simulationStatus = document.querySelector("#simulation-status");
 const defenseReportGrid = document.querySelector("#defense-report-grid");
 const fieldSvg = document.querySelector("#field");
 const routeLegend = document.querySelector("#route-legend");
+const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
+const modePanels = Array.from(document.querySelectorAll("[data-mode-panel]"));
 const bunchSideGroup = document.querySelector("#bunch-side-group");
 const bunchSideButtons = Array.from(document.querySelectorAll("[data-bunch-side]"));
+const proMotionGroup = document.querySelector("#pro-motion-group");
+const proMotionButtons = Array.from(document.querySelectorAll("[data-pro-motion]"));
 const sequenceNameInput = document.querySelector("#sequence-name-input");
 const saveSequenceButton = document.querySelector("#save-sequence-button");
 const addPlayButton = document.querySelector("#add-play-button");
 const sequenceStatus = document.querySelector("#sequence-status");
 const sequenceList = document.querySelector("#sequence-list");
+const modeViews = Array.from(document.querySelectorAll("[data-mode-view]"));
+const playbookBrowseButtons = Array.from(document.querySelectorAll("[data-browse]"));
+const playbookFilter = document.querySelector("#playbook-filter");
+const playbookGroups = document.querySelector("#playbook-groups");
+const presetPlaybooksContainer = document.querySelector("#preset-playbooks");
 
 const routeInputs = {
   x: document.querySelector("#route-x"),
@@ -91,17 +369,58 @@ const routeInputs = {
   c: document.querySelector("#route-c"),
 };
 
+const conceptInputs = {
+  run: document.querySelector("#run-concept-select"),
+  fake: document.querySelector("#fake-concept-select"),
+  option: document.querySelector("#option-concept-select"),
+};
+
 const svgNs = "http://www.w3.org/2000/svg";
 const storageKey = "flag-football-play-sequences";
+const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 let bunchSide = "left";
+let proMotion = "stay";
 let sequences = loadSequences();
+let routeOverrides = {};
 let simulationFrameId = 0;
 let animationStart = 0;
 let activeSimulation = null;
+let activeMode = "compose";
+let playbookBrowseMode = "formation";
+let playbookFilterValue = "all";
+let fieldViewport = createDefaultViewport();
+let activeRouteDrag = null;
 
-function getAlignment(formationKey, side = bunchSide) {
+function normalizeBunchSide(value) {
+  return value === "right" ? "right" : "left";
+}
+
+function normalizeProMotion(value) {
+  return value === "left" || value === "right" ? value : "stay";
+}
+
+function getProBackfieldLayout(motion = proMotion) {
+  const q = { ...formations.pro.q };
+  const start = { ...formations.pro.z };
+  const destinations = {
+    stay: start,
+    left: { x: 340, y: start.y },
+    right: { x: 660, y: start.y },
+  };
+
+  return {
+    q,
+    start,
+    destination: destinations[normalizeProMotion(motion)],
+  };
+}
+
+function getAlignment(formationKey, options = {}) {
+  const resolvedBunchSide = normalizeBunchSide(options?.bunchSide || bunchSide);
+  const resolvedProMotion = normalizeProMotion(options?.proMotion || proMotion);
+
   if (formationKey === "bunch") {
     const common = {
       x: { x: 400, y: 410 },
@@ -110,7 +429,7 @@ function getAlignment(formationKey, side = bunchSide) {
       q: { x: 500, y: 500 },
     };
 
-    if (side === "right") {
+    if (resolvedBunchSide === "right") {
       return {
         ...common,
         z: { x: 690, y: 372 },
@@ -123,7 +442,22 @@ function getAlignment(formationKey, side = bunchSide) {
     };
   }
 
+  if (formationKey === "pro") {
+    const { q, destination } = getProBackfieldLayout(resolvedProMotion);
+    return {
+      x: { ...formations.pro.x },
+      y: { ...formations.pro.y },
+      z: destination,
+      c: { ...formations.pro.c },
+      q,
+    };
+  }
+
   return formations[formationKey];
+}
+
+function getSnapshotAlignment(snapshot) {
+  return getAlignment(snapshot.formation, snapshot);
 }
 
 function currentPlaySnapshot() {
@@ -131,24 +465,249 @@ function currentPlaySnapshot() {
     formation: formationSelect.value,
     code: getPlayCode(),
     bunchSide,
+    proMotion,
+    routeOverrides: cloneRouteOverrides(routeOverrides),
+    concepts: getCurrentConcepts(),
   };
 }
 
 function applySnapshot(snapshot) {
+  const normalized = normalizeSnapshot(snapshot);
   stopSimulationSilently();
-  formationSelect.value = snapshot.formation;
-  bunchSide = snapshot.bunchSide || "left";
-  setPlayCode(snapshot.code);
+  formationSelect.value = normalized.formation;
+  bunchSide = normalized.bunchSide;
+  proMotion = normalized.proMotion;
+  routeOverrides = normalized.routeOverrides;
+  applyConcepts(normalized.concepts);
+  setPlayCode(normalized.code, { preserveOverrides: true });
+}
+
+function normalizeSnapshot(snapshot) {
+  return {
+    formation: snapshot?.formation || "bunch",
+    code: sanitizeCode(snapshot?.code || "0000"),
+    bunchSide: normalizeBunchSide(snapshot?.bunchSide),
+    proMotion: normalizeProMotion(snapshot?.proMotion),
+    routeOverrides: normalizeRouteOverrides(snapshot?.routeOverrides),
+    concepts: normalizeConcepts(snapshot?.concepts),
+  };
+}
+
+function normalizeConcepts(value) {
+  return Object.entries(conceptLibrary).reduce((accumulator, [kind, library]) => {
+    const requested = value?.[kind];
+    accumulator[kind] = requested && library[requested] ? requested : "none";
+    return accumulator;
+  }, {});
+}
+
+function getCurrentConcepts() {
+  return normalizeConcepts(
+    Object.fromEntries(
+      Object.entries(conceptInputs).map(([kind, select]) => [kind, select.value]),
+    ),
+  );
+}
+
+function applyConcepts(concepts) {
+  const normalized = normalizeConcepts(concepts);
+  Object.entries(conceptInputs).forEach(([kind, select]) => {
+    select.value = normalized[kind];
+  });
+}
+
+function createDefaultViewport() {
+  return {
+    x: 0,
+    y: 0,
+    width: fieldWidth,
+    height: fieldHeight,
+  };
+}
+
+function formatViewBox(viewport) {
+  return `${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`;
+}
+
+function clampViewport(viewport) {
+  const width = clamp(viewport.width, minViewportWidth, fieldWidth);
+  const height = width / fieldAspectRatio;
+  return {
+    x: clamp(viewport.x, 0, fieldWidth - width),
+    y: clamp(viewport.y, 0, fieldHeight - height),
+    width,
+    height,
+  };
+}
+
+function viewportCenter(viewport = fieldViewport) {
+  return {
+    x: viewport.x + viewport.width / 2,
+    y: viewport.y + viewport.height / 2,
+  };
+}
+
+function zoomField(factor, focus = viewportCenter()) {
+  const nextWidth = fieldViewport.width * factor;
+  const nextHeight = nextWidth / fieldAspectRatio;
+  const relativeX = (focus.x - fieldViewport.x) / fieldViewport.width;
+  const relativeY = (focus.y - fieldViewport.y) / fieldViewport.height;
+
+  fieldViewport = clampViewport({
+    x: focus.x - nextWidth * relativeX,
+    y: focus.y - nextHeight * relativeY,
+    width: nextWidth,
+    height: nextHeight,
+  });
+  render();
+}
+
+function resetFieldView() {
+  fieldViewport = createDefaultViewport();
+  render();
+}
+
+function normalizeRouteOverrides(value) {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  return routePlayers.reduce((accumulator, player) => {
+    const points = value[player];
+    if (!Array.isArray(points)) {
+      return accumulator;
+    }
+
+    const normalized = points
+      .filter((point) => Array.isArray(point) && point.length >= 2)
+      .map((point) => {
+        const x = Number(point[0]);
+        const y = Number(point[1]);
+        return [
+          clamp(Number.isFinite(x) ? x : 0, 0, fieldWidth),
+          clamp(Number.isFinite(y) ? y : 0, 0, fieldHeight),
+        ];
+      });
+
+    if (normalized.length > 0) {
+      accumulator[player] = normalized;
+    }
+
+    return accumulator;
+  }, {});
+}
+
+function cloneRouteOverrides(value = routeOverrides) {
+  return normalizeRouteOverrides(value);
+}
+
+function clearRouteOverrides(players = routePlayers) {
+  if (players.length === routePlayers.length) {
+    routeOverrides = {};
+    return;
+  }
+
+  players.forEach((player) => {
+    delete routeOverrides[player];
+  });
+}
+
+function setRouteOverride(player, points) {
+  const overrides = points.slice(1).map((point) => [
+    Math.round(clamp(point[0], 0, fieldWidth)),
+    Math.round(clamp(point[1], 0, fieldHeight)),
+  ]);
+
+  if (overrides.length === 0) {
+    delete routeOverrides[player];
+    return;
+  }
+
+  routeOverrides = {
+    ...routeOverrides,
+    [player]: overrides,
+  };
+}
+
+function activeConceptEntries(concepts) {
+  const normalized = normalizeConcepts(concepts);
+  return Object.entries(normalized)
+    .filter(([, value]) => value !== "none")
+    .map(([kind, value]) => ({
+      kind,
+      value,
+      ...conceptLibrary[kind][value],
+    }));
+}
+
+function formatConceptSummary(concepts) {
+  const active = activeConceptEntries(concepts);
+  if (active.length === 0) {
+    return "Base route concept";
+  }
+  return active.map((entry) => entry.shortLabel).join(" · ");
+}
+
+function formationVariantText(snapshot) {
+  const normalized = normalizeSnapshot(snapshot);
+  if (normalized.formation === "bunch") {
+    return `z ${normalized.bunchSide}`;
+  }
+
+  if (normalized.formation === "pro") {
+    return normalized.proMotion === "stay" ? "z backfield" : `z motion ${normalized.proMotion}`;
+  }
+
+  return "";
+}
+
+function formationSetupText(snapshot) {
+  const normalized = normalizeSnapshot(snapshot);
+  const variant = formationVariantText(normalized);
+  return variant ? `${normalized.formation} / ${variant}` : normalized.formation;
+}
+
+function setActiveMode(mode) {
+  activeMode = modeDescriptions[mode] ? mode : "compose";
+  render();
+}
+
+function renderActiveMode() {
+  modeButtons.forEach((button) => {
+    const isActive = button.dataset.mode === activeMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  modePanels.forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.modePanel !== activeMode);
+  });
+
+  const activeView = activeMode === "playbooks" ? "playbooks" : "studio";
+  modeViews.forEach((view) => {
+    view.classList.toggle("is-hidden", view.dataset.modeView !== activeView);
+  });
+
+  stageSubtitle.textContent = modeDescriptions[activeMode];
 }
 
 function updateBunchToggleUI() {
   bunchSideButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.bunchSide === bunchSide);
+    button.setAttribute("aria-pressed", button.dataset.bunchSide === bunchSide ? "true" : "false");
+  });
+}
+
+function updateProMotionUI() {
+  proMotionButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.proMotion === proMotion);
+    button.setAttribute("aria-pressed", button.dataset.proMotion === proMotion ? "true" : "false");
   });
 }
 
 function updateFormationControls() {
   bunchSideGroup.classList.toggle("is-hidden", formationSelect.value !== "bunch");
+  proMotionGroup.classList.toggle("is-hidden", formationSelect.value !== "pro");
 }
 
 function loadSequences() {
@@ -207,8 +766,11 @@ function renderSequences() {
               .map(
                 (play, playIndex) => `
                   <div class="sequence-play">
-                    <span class="sequence-play-code">${play.code}</span>
-                    <span>${play.formation}${play.formation === "bunch" ? ` / z ${play.bunchSide || "left"}` : ""}</span>
+                    <span class="sequence-play-code">${normalizeSnapshot(play).code}</span>
+                    <div>
+                      <span>${escapeHtml(formationSetupText(play))}</span>
+                      <div class="sequence-note">${escapeHtml(formatConceptSummary(normalizeSnapshot(play).concepts))}</div>
+                    </div>
                     <button type="button" data-load-sequence-play="${sequenceIndex}:${playIndex}">Load</button>
                   </div>
                 `,
@@ -238,6 +800,209 @@ function renderSequences() {
   });
 }
 
+function playbookDimension() {
+  return playbookBrowseMode === "type"
+    ? { library: playTypeLibrary, key: "type" }
+    : { library: formationLibrary, key: "formation" };
+}
+
+function renderPlaybookFilters() {
+  const { library } = playbookDimension();
+  const categories = ["all", ...Object.keys(library)];
+  if (!categories.includes(playbookFilterValue)) {
+    playbookFilterValue = "all";
+  }
+
+  playbookFilter.innerHTML = categories
+    .map((category) => {
+      const label = category === "all" ? "All Plays" : library[category].label;
+      const isActive = category === playbookFilterValue;
+      return `<button class="filter-chip${isActive ? " is-active" : ""}" type="button" data-filter="${category}" aria-pressed="${isActive}">${escapeHtml(label)}</button>`;
+    })
+    .join("");
+
+  playbookFilter.querySelectorAll("[data-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      playbookFilterValue = button.dataset.filter;
+      renderPlaybookLibrary();
+    });
+  });
+}
+
+function playbookThumbnail(play) {
+  const svg = createSvgElement("svg", {
+    viewBox: "0 0 1000 600",
+    class: "play-thumb",
+    role: "img",
+    "aria-label": `${play.name} diagram`,
+  });
+  renderField(svg, normalizeSnapshot(play));
+  return svg;
+}
+
+function createPlaybookCard(play) {
+  const card = document.createElement("article");
+  card.className = "playbook-card";
+
+  const thumb = document.createElement("div");
+  thumb.className = "playbook-thumb-shell";
+  thumb.appendChild(playbookThumbnail(play));
+  card.appendChild(thumb);
+
+  const body = document.createElement("div");
+  body.className = "playbook-card-body";
+  body.innerHTML = `
+    <div class="playbook-card-head">
+      <strong>${escapeHtml(play.name)}</strong>
+      <span class="playbook-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
+    </div>
+    <div class="playbook-badges">
+      <span class="playbook-badge" data-badge="formation">${escapeHtml(formationLibrary[play.formation].label)}</span>
+      <span class="playbook-badge" data-badge="type">${escapeHtml(playTypeLibrary[play.type].label)}</span>
+    </div>
+    <p class="playbook-card-note">${escapeHtml(formatConceptSummary(play.concepts))}</p>
+  `;
+
+  const openButton = document.createElement("button");
+  openButton.type = "button";
+  openButton.className = "playbook-open";
+  openButton.textContent = "Open in Studio";
+  openButton.addEventListener("click", () => openLibraryPlay(play.id));
+  body.appendChild(openButton);
+
+  card.appendChild(body);
+  return card;
+}
+
+function renderPlaybookLibrary() {
+  playbookBrowseButtons.forEach((button) => {
+    const isActive = button.dataset.browse === playbookBrowseMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  renderPlaybookFilters();
+
+  const { library, key } = playbookDimension();
+  const categories = Object.keys(library).filter(
+    (category) => playbookFilterValue === "all" || category === playbookFilterValue,
+  );
+
+  playbookGroups.innerHTML = "";
+  categories.forEach((category) => {
+    const plays = playLibrary.filter((play) => play[key] === category);
+    if (plays.length === 0) {
+      return;
+    }
+
+    const group = document.createElement("section");
+    group.className = "playbook-group";
+    const header = document.createElement("div");
+    header.className = "playbook-group-header";
+    header.innerHTML = `
+      <div>
+        <h3>${escapeHtml(library[category].label)}</h3>
+        <p>${escapeHtml(library[category].description)}</p>
+      </div>
+      <span class="playbook-group-count">${plays.length} play${plays.length === 1 ? "" : "s"}</span>
+    `;
+    group.appendChild(header);
+
+    const grid = document.createElement("div");
+    grid.className = "playbook-card-grid";
+    plays.forEach((play) => grid.appendChild(createPlaybookCard(play)));
+    group.appendChild(grid);
+    playbookGroups.appendChild(group);
+  });
+}
+
+function openLibraryPlay(id) {
+  const play = playLibrary.find((entry) => entry.id === id);
+  if (!play) {
+    return;
+  }
+  applySnapshot(play);
+  setActiveMode("compose");
+  setStatus(`Loaded ${play.name} into the studio.`);
+}
+
+function findLibraryPlay(id) {
+  return playLibrary.find((entry) => entry.id === id) || null;
+}
+
+function presetPlaybookPlays(playbook) {
+  return playbook.plays.map(findLibraryPlay).filter(Boolean);
+}
+
+function renderPresetPlaybooks() {
+  if (!presetPlaybooksContainer) {
+    return;
+  }
+
+  presetPlaybooksContainer.innerHTML = presetPlaybookGroups
+    .map(
+      (group) => `
+        <section class="preset-group">
+          <div class="preset-group-header">
+            <div>
+              <h3>${escapeHtml(group.title)}</h3>
+              <p>${escapeHtml(group.description)}</p>
+            </div>
+            <span class="preset-source">${escapeHtml(group.source)}</span>
+          </div>
+          ${group.playbooks
+            .map((playbook, index) => {
+              const plays = presetPlaybookPlays(playbook);
+              const codes = plays
+                .map((play) => `<span class="preset-code">${escapeHtml(normalizeSnapshot(play).code)}</span>`)
+                .join("");
+              return `
+                <div class="preset-card">
+                  <div class="preset-card-head">
+                    <strong>${escapeHtml(playbook.name)}</strong>
+                    <span class="preset-count">${plays.length} play${plays.length === 1 ? "" : "s"}</span>
+                  </div>
+                  <div class="preset-codes">${codes}</div>
+                  <button class="preset-load" type="button" data-preset="${group.id}:${index}">Load to My Playbooks</button>
+                </div>
+              `;
+            })
+            .join("")}
+        </section>
+      `,
+    )
+    .join("");
+
+  presetPlaybooksContainer.querySelectorAll("[data-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [groupId, indexRaw] = button.dataset.preset.split(":");
+      loadPresetPlaybook(groupId, Number(indexRaw));
+    });
+  });
+}
+
+function loadPresetPlaybook(groupId, index) {
+  const group = presetPlaybookGroups.find((entry) => entry.id === groupId);
+  const playbook = group?.playbooks[index];
+  if (!playbook) {
+    return;
+  }
+
+  const plays = presetPlaybookPlays(playbook).map((play) => normalizeSnapshot(play));
+  const name = playbook.name;
+  const existing = sequences.find((sequence) => sequence.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    existing.plays = plays;
+  } else {
+    sequences.unshift({ name, plays });
+  }
+
+  persistSequences();
+  renderSequences();
+  sequenceNameInput.value = name;
+  setStatus(`Loaded ${name} (${plays.length} plays) into My Playbooks.`);
+}
+
 function buildRouteOptions() {
   Object.entries(routeInputs).forEach(([, select]) => {
     select.innerHTML = Object.entries(routeTree)
@@ -246,17 +1011,63 @@ function buildRouteOptions() {
   });
 }
 
+function buildConceptOptions() {
+  Object.entries(conceptInputs).forEach(([kind, select]) => {
+    select.innerHTML = Object.entries(conceptLibrary[kind])
+      .map(([value, concept]) => `<option value="${value}">${escapeHtml(concept.label)}</option>`)
+      .join("");
+  });
+}
+
 function buildLegend() {
-  routeLegend.innerHTML = Object.entries(routeTree)
+  const routeCards = Object.entries(routeTree)
     .map(
       ([value, label]) => `
-        <div class="legend-card">
+        <article class="legend-card">
           <strong>${value}</strong>
           <span>${escapeHtml(label)}</span>
-        </div>
+        </article>
       `,
     )
     .join("");
+
+  const conceptSections = Object.entries(conceptLibrary)
+    .map(([kind, entries]) => {
+      const heading = kind.charAt(0).toUpperCase() + kind.slice(1);
+      const cards = Object.entries(entries)
+        .filter(([value]) => value !== "none")
+        .map(
+          ([, entry]) => `
+            <article class="legend-card concept-card" data-kind="${kind}">
+              <strong>${escapeHtml(entry.label)}</strong>
+              <span>${escapeHtml(entry.description)}</span>
+            </article>
+          `,
+        )
+        .join("");
+
+      return `
+        <section class="legend-section">
+          <div class="legend-header">
+            <h4>${heading}</h4>
+            <span class="legend-subtitle">Built-in ${heading.toLowerCase()} packages</span>
+          </div>
+          <div class="legend-grid">${cards}</div>
+        </section>
+      `;
+    })
+    .join("");
+
+  routeLegend.innerHTML = `
+    <section class="legend-section">
+      <div class="legend-header">
+        <h4>Routes</h4>
+        <span class="legend-subtitle">Base digit tree</span>
+      </div>
+      <div class="legend-grid">${routeCards}</div>
+    </section>
+    ${conceptSections}
+  `;
 }
 
 function sanitizeCode(value) {
@@ -269,28 +1080,41 @@ function getPlayCode() {
 }
 
 function syncSelectorsFromCode(code) {
-  ["x", "y", "z", "c"].forEach((player, index) => {
+  routePlayers.forEach((player, index) => {
     routeInputs[player].value = code[index];
   });
 }
 
 function syncCodeFromSelectors() {
-  const code = ["x", "y", "z", "c"].map((player) => routeInputs[player].value).join("");
+  const code = routePlayers.map((player) => routeInputs[player].value).join("");
   playCodeInput.value = code;
   return code;
 }
 
-function setPlayCode(code) {
+function setPlayCode(code, options = {}) {
+  const { preserveOverrides = false, previousCode = playCodeBadge.textContent } = options;
+  const lastCode = sanitizeCode(previousCode || "0000");
   const cleaned = sanitizeCode(code);
   playCodeInput.value = cleaned;
   syncSelectorsFromCode(cleaned);
+
+  if (!preserveOverrides) {
+    routePlayers.forEach((player, index) => {
+      if (lastCode[index] !== cleaned[index]) {
+        delete routeOverrides[player];
+      }
+    });
+  }
+
   render();
 }
 
 function createSvgElement(tag, attributes = {}) {
   const element = document.createElementNS(svgNs, tag);
   Object.entries(attributes).forEach(([name, value]) => {
-    element.setAttribute(name, value);
+    if (value !== null && value !== undefined) {
+      element.setAttribute(name, value);
+    }
   });
   return element;
 }
@@ -299,10 +1123,9 @@ function clearSvg(target) {
   target.innerHTML = "";
 }
 
-function drawFieldBase(target) {
-  const defs = createSvgElement("defs");
+function appendArrowMarker(defs, id, fill) {
   const marker = createSvgElement("marker", {
-    id: "arrowhead",
+    id,
     markerWidth: "10",
     markerHeight: "10",
     refX: "8",
@@ -312,11 +1135,48 @@ function drawFieldBase(target) {
   marker.appendChild(
     createSvgElement("path", {
       d: "M 0 0 L 10 5 L 0 10 z",
-      fill: "#ffeb7a",
+      fill,
     }),
   );
   defs.appendChild(marker);
+}
+
+function drawFieldBase(target) {
+  const defs = createSvgElement("defs");
+  const fieldGradient = createSvgElement("linearGradient", {
+    id: "field-gradient",
+    x1: "0%",
+    y1: "0%",
+    x2: "0%",
+    y2: "100%",
+  });
+  fieldGradient.appendChild(
+    createSvgElement("stop", {
+      offset: "0%",
+      "stop-color": "#2d7f4d",
+    }),
+  );
+  fieldGradient.appendChild(
+    createSvgElement("stop", {
+      offset: "100%",
+      "stop-color": "#1e6a3d",
+    }),
+  );
+  defs.appendChild(fieldGradient);
+  appendArrowMarker(defs, "arrowhead-route", "#ffeb7a");
+  appendArrowMarker(defs, "arrowhead-run", conceptColors.run);
+  appendArrowMarker(defs, "arrowhead-fake", conceptColors.fake);
+  appendArrowMarker(defs, "arrowhead-option", conceptColors.option);
   target.appendChild(defs);
+  target.appendChild(
+    createSvgElement("rect", {
+      x: 0,
+      y: 0,
+      width: 1000,
+      height: 600,
+      fill: "url(#field-gradient)",
+    }),
+  );
 
   for (let yard = 0; yard <= 10; yard += 1) {
     target.appendChild(
@@ -370,7 +1230,7 @@ function routePoints(routeNumber, start) {
 
   switch (Number(routeNumber)) {
     case 0:
-      return [[x, y], [x, y + 26], [x + 55 * towardMiddle, y + 26]];
+      return [[x, y], [x, y - 30], [x + 55 * towardMiddle, y - 30]];
     case 1:
       return [[x, y], [x, y - short], [x + side * towardSideline, y - short]];
     case 2:
@@ -392,6 +1252,42 @@ function routePoints(routeNumber, start) {
     default:
       return [[x, y], [x, y - medium]];
   }
+}
+
+function routeCodeForPlayer(snapshot, player) {
+  return snapshot.code[routePlayers.indexOf(player)];
+}
+
+function conceptValue(snapshot, kind) {
+  return normalizeConcepts(snapshot.concepts)[kind];
+}
+
+function getRoutePoints(snapshot, player) {
+  const alignment = getSnapshotAlignment(snapshot);
+  const defaults = routePoints(routeCodeForPlayer(snapshot, player), alignment[player]);
+  const overrides = snapshot.routeOverrides?.[player];
+
+  if (!Array.isArray(overrides) || overrides.length === 0) {
+    return defaults;
+  }
+
+  return defaults.map((point, index) => {
+    if (index === 0) {
+      return [point[0], point[1]];
+    }
+
+    const override = overrides[index - 1];
+    if (!Array.isArray(override) || override.length < 2) {
+      return [point[0], point[1]];
+    }
+
+    const x = Number(override[0]);
+    const y = Number(override[1]);
+    return [
+      clamp(Number.isFinite(x) ? x : point[0], 0, fieldWidth),
+      clamp(Number.isFinite(y) ? y : point[1], 0, fieldHeight),
+    ];
+  });
 }
 
 function buildPath(points) {
@@ -435,15 +1331,35 @@ function samplePolyline(points, progress) {
   return { x: end[0], y: end[1] };
 }
 
+function leftEdgePlayer(alignment) {
+  return routePlayers.reduce((left, player) => (alignment[player].x < alignment[left].x ? player : left), routePlayers[0]);
+}
+
+function rightEdgePlayer(alignment) {
+  return routePlayers.reduce((right, player) => (alignment[player].x > alignment[right].x ? player : right), routePlayers[0]);
+}
+
+function getPreSnapMotionPath(snapshot) {
+  if (snapshot.formation !== "pro" || normalizeProMotion(snapshot.proMotion) === "stay") {
+    return null;
+  }
+
+  const { start, destination } = getProBackfieldLayout(snapshot.proMotion);
+  return [
+    [start.x, start.y],
+    [destination.x, destination.y],
+  ];
+}
+
 function getOffensePositions(snapshot, progress) {
-  const alignment = getAlignment(snapshot.formation, snapshot.bunchSide);
+  const alignment = getSnapshotAlignment(snapshot);
   const positions = {};
   const routeDelay = { x: 0, y: 0.03, z: 0.06, c: 0.12 };
 
-  ["x", "y", "z", "c"].forEach((player, index) => {
+  routePlayers.forEach((player) => {
     const adjusted = clamp((progress - routeDelay[player]) / (1 - routeDelay[player]), 0, 1);
     const eased = 1 - (1 - adjusted) * (1 - adjusted);
-    const points = routePoints(snapshot.code[index], alignment[player]);
+    const points = getRoutePoints(snapshot, player);
     positions[player] = samplePolyline(points, eased);
   });
 
@@ -456,11 +1372,20 @@ function getOffensePositions(snapshot, progress) {
 }
 
 function drawRoutes(target, snapshot) {
-  const alignment = getAlignment(snapshot.formation, snapshot.bunchSide);
-  const labels = { x: snapshot.code[0], y: snapshot.code[1], z: snapshot.code[2], c: snapshot.code[3] };
+  const alignment = getSnapshotAlignment(snapshot);
+  const preSnapMotion = getPreSnapMotionPath(snapshot);
 
-  Object.entries(labels).forEach(([player, routeNumber]) => {
-    const points = routePoints(routeNumber, alignment[player]);
+  if (preSnapMotion) {
+    drawStyledPath(target, preSnapMotion, {
+      stroke: playerColors.z,
+      width: 5,
+      dasharray: "16 10",
+      opacity: 0.7,
+    });
+  }
+
+  routePlayers.forEach((player) => {
+    const points = getRoutePoints(snapshot, player);
     target.appendChild(
       createSvgElement("path", {
         d: buildPath(points),
@@ -480,7 +1405,7 @@ function drawRoutes(target, snapshot) {
         "stroke-width": 4,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "marker-end": "url(#arrowhead)",
+        "marker-end": "url(#arrowhead-route)",
       }),
     );
   });
@@ -506,8 +1431,247 @@ function drawRoutes(target, snapshot) {
   );
 }
 
+function drawStyledPath(target, points, style) {
+  target.appendChild(
+    createSvgElement("path", {
+      d: buildPath(points),
+      fill: "none",
+      stroke: style.stroke,
+      "stroke-width": style.width || 5,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "stroke-dasharray": style.dasharray || null,
+      "stroke-opacity": style.opacity || null,
+      "marker-end": style.marker ? `url(#${style.marker})` : null,
+    }),
+  );
+}
+
+function drawDecisionNode(target, x, y, color) {
+  target.appendChild(
+    createSvgElement("circle", {
+      cx: x,
+      cy: y,
+      r: 10,
+      fill: "#fff7eb",
+      stroke: color,
+      "stroke-width": 4,
+    }),
+  );
+}
+
+function drawConcepts(target, snapshot) {
+  const alignment = getSnapshotAlignment(snapshot);
+  const q = alignment.q;
+  const c = alignment.c;
+  const leftPlayer = leftEdgePlayer(alignment);
+  const rightPlayer = rightEdgePlayer(alignment);
+  const leftPoint = alignment[leftPlayer];
+  const rightPoint = alignment[rightPlayer];
+
+  switch (conceptValue(snapshot, "run")) {
+    case "qb-draw":
+      drawStyledPath(target, [[q.x, q.y], [q.x, q.y - 56], [q.x, q.y - 180]], {
+        stroke: conceptColors.run,
+        width: 6,
+        marker: "arrowhead-run",
+      });
+      break;
+    case "c-dive":
+      drawStyledPath(target, [[q.x, q.y], [c.x, c.y + 16], [c.x, c.y - 60], [c.x, c.y - 170]], {
+        stroke: conceptColors.run,
+        width: 6,
+        marker: "arrowhead-run",
+      });
+      break;
+    case "jet-left":
+      drawStyledPath(target, [[q.x, q.y], [q.x - 70, q.y - 40], [q.x - 180, q.y - 110], [q.x - 280, q.y - 150]], {
+        stroke: conceptColors.run,
+        width: 6,
+        marker: "arrowhead-run",
+      });
+      break;
+    case "jet-right":
+      drawStyledPath(target, [[q.x, q.y], [q.x + 70, q.y - 40], [q.x + 180, q.y - 110], [q.x + 280, q.y - 150]], {
+        stroke: conceptColors.run,
+        width: 6,
+        marker: "arrowhead-run",
+      });
+      break;
+    case "reverse":
+      drawStyledPath(target, [[rightPoint.x, rightPoint.y], [q.x + 70, q.y - 12], [q.x - 120, q.y - 78], [q.x - 280, q.y - 128]], {
+        stroke: conceptColors.run,
+        width: 6,
+        marker: "arrowhead-run",
+      });
+      break;
+    default:
+      break;
+  }
+
+  switch (conceptValue(snapshot, "fake")) {
+    case "play-action":
+      drawStyledPath(target, [[q.x, q.y], [c.x, c.y + 10], [c.x, c.y - 60]], {
+        stroke: conceptColors.fake,
+        width: 4,
+        dasharray: "12 10",
+        marker: "arrowhead-fake",
+      });
+      break;
+    case "jet-fake-left":
+      drawStyledPath(target, [[rightPoint.x, rightPoint.y], [q.x + 20, q.y - 4], [q.x - 130, q.y - 22], [q.x - 250, q.y - 84]], {
+        stroke: conceptColors.fake,
+        width: 4,
+        dasharray: "12 10",
+        marker: "arrowhead-fake",
+      });
+      break;
+    case "jet-fake-right":
+      drawStyledPath(target, [[leftPoint.x, leftPoint.y], [q.x - 20, q.y - 4], [q.x + 130, q.y - 22], [q.x + 250, q.y - 84]], {
+        stroke: conceptColors.fake,
+        width: 4,
+        dasharray: "12 10",
+        marker: "arrowhead-fake",
+      });
+      break;
+    case "reverse-fake":
+      drawStyledPath(target, [[leftPoint.x, leftPoint.y], [q.x - 40, q.y - 10], [q.x + 110, q.y - 76], [q.x + 250, q.y - 128]], {
+        stroke: conceptColors.fake,
+        width: 4,
+        dasharray: "12 10",
+        marker: "arrowhead-fake",
+      });
+      break;
+    default:
+      break;
+  }
+
+  switch (conceptValue(snapshot, "option")) {
+    case "read-left": {
+      const mesh = [q.x, q.y - 52];
+      drawStyledPath(target, [[q.x, q.y], mesh], {
+        stroke: conceptColors.option,
+        width: 5,
+      });
+      drawStyledPath(target, [mesh, [q.x - 110, q.y - 130]], {
+        stroke: conceptColors.option,
+        width: 5,
+        marker: "arrowhead-option",
+      });
+      drawStyledPath(target, [mesh, [c.x - 24, c.y - 126]], {
+        stroke: conceptColors.option,
+        width: 4,
+        dasharray: "10 8",
+        marker: "arrowhead-option",
+      });
+      drawDecisionNode(target, mesh[0], mesh[1], conceptColors.option);
+      break;
+    }
+    case "read-right": {
+      const mesh = [q.x, q.y - 52];
+      drawStyledPath(target, [[q.x, q.y], mesh], {
+        stroke: conceptColors.option,
+        width: 5,
+      });
+      drawStyledPath(target, [mesh, [q.x + 110, q.y - 130]], {
+        stroke: conceptColors.option,
+        width: 5,
+        marker: "arrowhead-option",
+      });
+      drawStyledPath(target, [mesh, [c.x + 24, c.y - 126]], {
+        stroke: conceptColors.option,
+        width: 4,
+        dasharray: "10 8",
+        marker: "arrowhead-option",
+      });
+      drawDecisionNode(target, mesh[0], mesh[1], conceptColors.option);
+      break;
+    }
+    case "speed-left": {
+      const pitch = [q.x - 50, q.y - 62];
+      drawStyledPath(target, [[q.x, q.y], pitch, [q.x - 150, q.y - 126]], {
+        stroke: conceptColors.option,
+        width: 5,
+        marker: "arrowhead-option",
+      });
+      drawStyledPath(target, [pitch, [leftPoint.x + 28, leftPoint.y - 68]], {
+        stroke: conceptColors.option,
+        width: 4,
+        dasharray: "10 8",
+        marker: "arrowhead-option",
+      });
+      drawDecisionNode(target, pitch[0], pitch[1], conceptColors.option);
+      break;
+    }
+    case "speed-right": {
+      const pitch = [q.x + 50, q.y - 62];
+      drawStyledPath(target, [[q.x, q.y], pitch, [q.x + 150, q.y - 126]], {
+        stroke: conceptColors.option,
+        width: 5,
+        marker: "arrowhead-option",
+      });
+      drawStyledPath(target, [pitch, [rightPoint.x - 28, rightPoint.y - 68]], {
+        stroke: conceptColors.option,
+        width: 4,
+        dasharray: "10 8",
+        marker: "arrowhead-option",
+      });
+      drawDecisionNode(target, pitch[0], pitch[1], conceptColors.option);
+      break;
+    }
+    case "rpo-bubble": {
+      const mesh = [q.x, q.y - 46];
+      drawStyledPath(target, [[q.x, q.y], mesh, [c.x, c.y - 140]], {
+        stroke: conceptColors.option,
+        width: 5,
+        marker: "arrowhead-option",
+      });
+      drawStyledPath(target, [[rightPoint.x, rightPoint.y], [rightPoint.x + 40, rightPoint.y - 14], [rightPoint.x + 74, rightPoint.y + 4]], {
+        stroke: conceptColors.option,
+        width: 4,
+        dasharray: "10 8",
+        marker: "arrowhead-option",
+      });
+      drawDecisionNode(target, mesh[0], mesh[1], conceptColors.option);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+function drawRouteHandles(target, snapshot) {
+  routePlayers.forEach((player) => {
+    const points = getRoutePoints(snapshot, player);
+    points.slice(1).forEach((point, index) => {
+      target.appendChild(
+        createSvgElement("circle", {
+          cx: point[0],
+          cy: point[1],
+          r: 12,
+          fill: "rgba(255,247,235,0.98)",
+          stroke: playerColors[player],
+          "stroke-width": 4,
+          "data-route-player": player,
+          "data-route-point-index": String(index + 1),
+          cursor: "grab",
+        }),
+      );
+      target.appendChild(
+        createSvgElement("circle", {
+          cx: point[0],
+          cy: point[1],
+          r: 4,
+          fill: playerColors[player],
+          "pointer-events": "none",
+        }),
+      );
+    });
+  });
+}
+
 function drawPlayers(target, snapshot, positions) {
-  const alignment = getAlignment(snapshot.formation, snapshot.bunchSide);
+  const alignment = getSnapshotAlignment(snapshot);
   const routeMap = { x: snapshot.code[0], y: snapshot.code[1], z: snapshot.code[2], c: snapshot.code[3], q: "QB" };
   const currentPositions = positions || alignment;
 
@@ -537,7 +1701,9 @@ function drawPlayers(target, snapshot, positions) {
 
     const tag = createSvgElement("text", {
       x: position.x,
-      y: position.y + 52,
+      y: player === "q" && snapshot.formation === "pro" && Math.abs(alignment.z.x - alignment.q.x) < 40
+        ? position.y - 34
+        : position.y + 52,
       "text-anchor": "middle",
       "font-family": "Avenir Next, Trebuchet MS, sans-serif",
       "font-size": "18",
@@ -576,9 +1742,12 @@ function drawDefense(target, defense, offensePositions, progress) {
 }
 
 function renderField(target, snapshot, simulation = null) {
+  const viewport = target === fieldSvg ? fieldViewport : createDefaultViewport();
+  target.setAttribute("viewBox", formatViewBox(viewport));
   clearSvg(target);
   drawFieldBase(target);
   drawRoutes(target, snapshot);
+  drawConcepts(target, snapshot);
 
   if (simulation) {
     const offensePositions = getOffensePositions(snapshot, simulation.progress);
@@ -588,6 +1757,9 @@ function renderField(target, snapshot, simulation = null) {
   }
 
   drawPlayers(target, snapshot);
+  if (target === fieldSvg && activeMode === "compose") {
+    drawRouteHandles(target, snapshot);
+  }
 }
 
 function getDefensePositions(defense, offensePositions, progress) {
@@ -661,8 +1833,17 @@ function getDefensePositions(defense, offensePositions, progress) {
   });
 }
 
+function totalConceptBonus(snapshot, defense) {
+  const concepts = normalizeConcepts(snapshot.concepts);
+  return Object.entries(concepts).reduce((sum, [kind, value]) => {
+    if (value === "none") {
+      return sum;
+    }
+    return sum + (conceptBonuses[kind][value]?.[defense] || 0);
+  }, 0);
+}
+
 function simulateDefense(snapshot, defense) {
-  const routePlayers = ["x", "y", "z", "c"];
   const bestByPlayer = {};
   const samples = [];
 
@@ -698,7 +1879,13 @@ function simulateDefense(snapshot, defense) {
 
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
-  const totalScore = clamp(Math.round(ranked.reduce((sum, item) => sum + item.score, 0) / ranked.length), 20, 95);
+  const conceptBonus = totalConceptBonus(snapshot, defense);
+  const totalScore = clamp(
+    Math.round(ranked.reduce((sum, item) => sum + item.score, 0) / ranked.length + conceptBonus),
+    20,
+    99,
+  );
+  const conceptText = formatConceptSummary(snapshot.concepts);
 
   return {
     defense,
@@ -707,8 +1894,8 @@ function simulateDefense(snapshot, defense) {
     bestPlayer: best.player,
     bestRoute: routeTree[best.route],
     weakestPlayer: worst.player,
-    summary: `${best.player.toUpperCase()} on the ${routeTree[best.route].toLowerCase()} gives the cleanest window.`,
-    detail: `${defenseDescriptions[defense]} The tightest problem is ${worst.player.toUpperCase()}, where leverage closes fastest.`,
+    summary: `${best.player.toUpperCase()} on the ${routeTree[best.route].toLowerCase()} gives the cleanest window. ${conceptText}.`,
+    detail: `${defenseDescriptions[defense]} The tightest problem is ${worst.player.toUpperCase()}, where leverage closes fastest. Concept boost: +${conceptBonus}.`,
   };
 }
 
@@ -791,42 +1978,164 @@ function render() {
   const snapshot = currentPlaySnapshot();
   playCodeInput.value = snapshot.code;
   playCodeBadge.textContent = snapshot.code;
+  currentPlayTitle.textContent = formatPlayTitle(snapshot);
+  currentPlayConcepts.innerHTML = activeConceptEntries(snapshot.concepts)
+    .map(
+      (entry) => `<span class="concept-pill" data-kind="${entry.kind}">${escapeHtml(entry.shortLabel)}</span>`,
+    )
+    .join("");
+  if (currentPlayConcepts.innerHTML === "") {
+    currentPlayConcepts.innerHTML = '<span class="concept-pill">Base route concept</span>';
+  }
+  renderActiveMode();
   updateFormationControls();
   updateBunchToggleUI();
+  updateProMotionUI();
   renderField(fieldSvg, snapshot, activeSimulation);
   renderDefenseReports();
 }
 
+function svgPointFromEvent(target, event) {
+  const point = target.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  const matrix = target.getScreenCTM();
+  if (!matrix) {
+    return null;
+  }
+  return point.matrixTransform(matrix.inverse());
+}
+
+function updateDraggedRoute(event) {
+  if (!activeRouteDrag || event.pointerId !== activeRouteDrag.pointerId) {
+    return;
+  }
+
+  const svgPoint = svgPointFromEvent(fieldSvg, event);
+  if (!svgPoint) {
+    return;
+  }
+
+  const snapshot = currentPlaySnapshot();
+  const points = getRoutePoints(snapshot, activeRouteDrag.player);
+  points[activeRouteDrag.pointIndex] = [
+    clamp(svgPoint.x, 0, fieldWidth),
+    clamp(svgPoint.y, 0, fieldHeight),
+  ];
+  setRouteOverride(activeRouteDrag.player, points);
+  render();
+}
+
+function releaseRouteDrag(pointerId) {
+  if (!activeRouteDrag || (pointerId !== undefined && activeRouteDrag.pointerId !== pointerId)) {
+    return;
+  }
+
+  if (typeof fieldSvg.hasPointerCapture === "function" && fieldSvg.hasPointerCapture(activeRouteDrag.pointerId)) {
+    fieldSvg.releasePointerCapture(activeRouteDrag.pointerId);
+  }
+  activeRouteDrag = null;
+}
+
+function handleFieldPointerDown(event) {
+  if (activeMode !== "compose") {
+    return;
+  }
+
+  if (typeof event.target.closest !== "function") {
+    return;
+  }
+
+  const handle = event.target.closest("[data-route-player]");
+  if (!handle) {
+    return;
+  }
+
+  event.preventDefault();
+  stopSimulationSilently();
+  activeRouteDrag = {
+    pointerId: event.pointerId,
+    player: handle.getAttribute("data-route-player"),
+    pointIndex: Number(handle.getAttribute("data-route-point-index")),
+  };
+  fieldSvg.setPointerCapture(event.pointerId);
+  updateDraggedRoute(event);
+}
+
+function handleFieldPointerMove(event) {
+  updateDraggedRoute(event);
+}
+
+function handleFieldPointerUp(event) {
+  if (!activeRouteDrag || event.pointerId !== activeRouteDrag.pointerId) {
+    return;
+  }
+
+  releaseRouteDrag(event.pointerId);
+  render();
+}
+
 function bindEvents() {
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveMode(button.dataset.mode);
+    });
+  });
+
+  playbookBrowseButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      playbookBrowseMode = button.dataset.browse === "type" ? "type" : "formation";
+      playbookFilterValue = "all";
+      renderPlaybookLibrary();
+    });
+  });
+
   formationSelect.addEventListener("change", () => {
     stopSimulationSilently();
+    clearRouteOverrides();
     render();
   });
 
   playCodeInput.addEventListener("input", () => {
-    const code = getPlayCode();
-    syncSelectorsFromCode(code);
     stopSimulationSilently();
-    render();
+    setPlayCode(playCodeInput.value);
   });
 
   Object.entries(routeInputs).forEach(([, select]) => {
     select.addEventListener("change", () => {
-      syncCodeFromSelectors();
+      stopSimulationSilently();
+      setPlayCode(syncCodeFromSelectors());
+    });
+  });
+
+  Object.entries(conceptInputs).forEach(([, select]) => {
+    select.addEventListener("change", () => {
       stopSimulationSilently();
       render();
     });
   });
 
   randomPlayButton.addEventListener("click", () => {
+    stopSimulationSilently();
+    clearRouteOverrides();
     const code = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join("");
     setPlayCode(code);
   });
 
   bunchSideButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      bunchSide = button.dataset.bunchSide;
+      bunchSide = normalizeBunchSide(button.dataset.bunchSide);
       stopSimulationSilently();
+      clearRouteOverrides();
+      render();
+    });
+  });
+
+  proMotionButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      proMotion = normalizeProMotion(button.dataset.proMotion);
+      stopSimulationSilently();
+      clearRouteOverrides(["z"]);
       render();
     });
   });
@@ -834,9 +2143,9 @@ function bindEvents() {
   document.querySelectorAll(".quick-play").forEach((button) => {
     button.addEventListener("click", () => {
       formationSelect.value = button.dataset.formation;
-      setPlayCode(button.dataset.code);
       stopSimulationSilently();
-      render();
+      clearRouteOverrides();
+      setPlayCode(button.dataset.code);
     });
   });
 
@@ -882,6 +2191,25 @@ function bindEvents() {
   defenseSelect.addEventListener("change", render);
   simulateButton.addEventListener("click", startSimulation);
   stopSimulationButton.addEventListener("click", stopSimulation);
+  zoomOutButton.addEventListener("click", () => zoomField(1 / zoomStep));
+  zoomInButton.addEventListener("click", () => zoomField(zoomStep));
+  resetViewButton.addEventListener("click", resetFieldView);
+  resetRoutesButton.addEventListener("click", () => {
+    stopSimulationSilently();
+    clearRouteOverrides();
+    render();
+    setSimulationStatus("Reset custom route arrows.");
+  });
+  fieldSvg.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const focus = svgPointFromEvent(fieldSvg, event) || viewportCenter();
+    zoomField(event.deltaY < 0 ? zoomStep : 1 / zoomStep, focus);
+  }, { passive: false });
+  fieldSvg.addEventListener("pointerdown", handleFieldPointerDown);
+  fieldSvg.addEventListener("pointermove", handleFieldPointerMove);
+  fieldSvg.addEventListener("pointerup", handleFieldPointerUp);
+  fieldSvg.addEventListener("pointercancel", handleFieldPointerUp);
+  exportSvgButton.addEventListener("click", copyPlaySvg);
   exportPptxButton.addEventListener("click", exportPptx);
 }
 
@@ -907,7 +2235,7 @@ function collectExportPlays() {
   if (namedSequence) {
     return {
       title: namedSequence.name,
-      plays: namedSequence.plays,
+      plays: namedSequence.plays.map((play) => normalizeSnapshot(play)),
     };
   }
 
@@ -918,17 +2246,55 @@ function collectExportPlays() {
   };
 }
 
-function buildExportSvg(snapshot, report) {
+function formatPlayTitle(snapshot) {
+  const formation = snapshot.formation.charAt(0).toUpperCase() + snapshot.formation.slice(1);
+  return `${formation} ${snapshot.code}`;
+}
+
+function formatPlayBoardLabel(snapshot) {
+  const normalized = normalizeSnapshot(snapshot);
+  const variant = formationVariantText(normalized);
+  return `${normalized.formation.toUpperCase()} ${normalized.code}${variant ? ` / ${variant.toUpperCase()}` : ""}`;
+}
+
+function buildExportSvg(snapshot, options = {}) {
+  const { report = null, title = "" } = options;
   const tempSvg = createSvgElement("svg", {
     xmlns: svgNs,
     viewBox: "0 0 1000 600",
+    width: "1000",
+    height: "600",
   });
   renderField(tempSvg, snapshot);
 
-  if (report) {
+  if (title) {
+    const titleWidth = Math.max(220, Math.min(420, 100 + title.length * 14));
     const banner = createSvgElement("rect", {
       x: 28,
       y: 26,
+      width: titleWidth,
+      height: 58,
+      rx: 18,
+      fill: "rgba(19,42,30,0.78)",
+    });
+    tempSvg.appendChild(banner);
+
+    const titleText = createSvgElement("text", {
+      x: 50,
+      y: 64,
+      fill: "#fff7eb",
+      "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
+      "font-size": "30",
+    });
+    titleText.textContent = title;
+    tempSvg.appendChild(titleText);
+  }
+
+  if (report) {
+    const reportY = title ? 96 : 26;
+    const banner = createSvgElement("rect", {
+      x: 28,
+      y: reportY,
       width: 380,
       height: 104,
       rx: 18,
@@ -938,7 +2304,7 @@ function buildExportSvg(snapshot, report) {
 
     const title = createSvgElement("text", {
       x: 50,
-      y: 66,
+      y: reportY + 40,
       fill: "#fff7eb",
       "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
       "font-size": "28",
@@ -948,7 +2314,7 @@ function buildExportSvg(snapshot, report) {
 
     const body = createSvgElement("text", {
       x: 50,
-      y: 100,
+      y: reportY + 74,
       fill: "#fff7eb",
       "font-family": "Avenir Next, Trebuchet MS, sans-serif",
       "font-size": "18",
@@ -957,20 +2323,88 @@ function buildExportSvg(snapshot, report) {
     tempSvg.appendChild(body);
   }
 
-  return new XMLSerializer().serializeToString(tempSvg);
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(tempSvg)}`;
+}
+
+function copyTextFallback(value) {
+  const textArea = document.createElement("textarea");
+  textArea.value = value;
+  textArea.setAttribute("readonly", "true");
+  textArea.style.position = "fixed";
+  textArea.style.opacity = "0";
+  document.body.appendChild(textArea);
+  textArea.select();
+  textArea.setSelectionRange(0, value.length);
+  const copied = document.execCommand("copy");
+  textArea.remove();
+  return copied;
+}
+
+function safeExportName(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "playbook";
+}
+
+function describePlayExport(play) {
+  const normalized = normalizeSnapshot(play);
+  const variant = formationVariantText(normalized).replace(/\s+/g, "-");
+  return `${normalized.formation}-${normalized.code}${variant ? `-${variant}` : ""}`;
+}
+
+function buildSvgExportSet(exportSet) {
+  const reports = exportSet.plays.map((play) => simulateDefense(play, defenseSelect.value));
+  const files = exportSet.plays.map((play, index) => ({
+    name: `${String(index + 1).padStart(2, "0")}-${safeExportName(describePlayExport(play))}.svg`,
+    data: buildExportSvg(play, { report: reports[index] }),
+  }));
+
+  return { reports, files };
+}
+
+async function copyPlaySvg() {
+  const snapshot = currentPlaySnapshot();
+  const title = formatPlayTitle(snapshot);
+  const svgMarkup = buildExportSvg(snapshot, { title });
+
+  try {
+    if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [svgMime]: new Blob([svgMarkup], { type: svgMime }),
+          "text/plain": new Blob([svgMarkup], { type: "text/plain" }),
+        }),
+      ]);
+      setSimulationStatus(`Copied ${title} to the clipboard.`);
+      return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(svgMarkup);
+      setSimulationStatus(`Copied SVG markup for ${title} to the clipboard.`);
+      return;
+    }
+  } catch {
+    // Fall through to the legacy copy path below.
+  }
+
+  if (copyTextFallback(svgMarkup)) {
+    setSimulationStatus(`Copied SVG markup for ${title} to the clipboard.`);
+    return;
+  }
+
+  setSimulationStatus("Clipboard access is unavailable in this browser context.");
 }
 
 function exportPptx() {
   const exportSet = collectExportPlays();
-  const reports = exportSet.plays.map((play) => simulateDefense(play, defenseSelect.value));
-  const svgFiles = exportSet.plays.map((play, index) => ({
+  const { reports, files } = buildSvgExportSet(exportSet);
+  const svgFiles = files.map((file, index) => ({
     name: `ppt/media/image${index + 1}.svg`,
-    data: buildExportSvg(play, reports[index]),
+    data: file.data,
   }));
 
   const pptxBytes = buildPptx(exportSet.title, exportSet.plays, reports, svgFiles);
   const blob = new Blob([pptxBytes], { type: pptxMime });
-  const safeName = exportSet.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "playbook";
+  const safeName = safeExportName(exportSet.title);
   downloadBlob(blob, `${safeName}.pptx`);
   setSimulationStatus(`Exported ${exportSet.plays.length} slide${exportSet.plays.length === 1 ? "" : "s"} to PPTX.`);
 }
@@ -1199,7 +2633,7 @@ function titleSlideRelsXml() {
 }
 
 function playSlideXml(play, report, imageIndex) {
-  const label = `${play.formation.toUpperCase()} ${play.code}${play.formation === "bunch" ? ` / Z ${play.bunchSide.toUpperCase()}` : ""}`;
+  const label = formatPlayBoardLabel(play);
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld>
@@ -1406,9 +2840,28 @@ function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+function registerAppShell() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  window.addEventListener("load", async () => {
+    try {
+      await navigator.serviceWorker.register("./sw.js");
+    } catch {
+      // Ignore service worker registration issues during local development.
+    }
+  });
+}
+
 buildRouteOptions();
+buildConceptOptions();
 buildLegend();
 bindEvents();
 syncSelectorsFromCode(getPlayCode());
+applyConcepts({});
 renderSequences();
+renderPlaybookLibrary();
+renderPresetPlaybooks();
+registerAppShell();
 render();
