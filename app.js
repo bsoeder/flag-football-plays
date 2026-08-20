@@ -199,6 +199,7 @@ const playLibrary = [
 ];
 
 const routePlayers = ["x", "y", "z", "c"];
+const allPlayers = ["x", "y", "z", "c", "q"];
 const fieldWidth = 1000;
 const fieldHeight = 600;
 const fieldAspectRatio = fieldWidth / fieldHeight;
@@ -353,6 +354,7 @@ let bunchSide = "left";
 let proMotion = "stay";
 let sequences = loadSequences();
 let routeOverrides = {};
+let alignmentOverrides = {};
 let simulationFrameId = 0;
 let animationStart = 0;
 let activeSimulation = null;
@@ -361,6 +363,7 @@ let playbookBrowseMode = "formation";
 let playbookFilterValue = "all";
 let fieldViewport = createDefaultViewport();
 let activeRouteDrag = null;
+let activePlayerDrag = null;
 
 function normalizeBunchSide(value) {
   return value === "right" ? "right" : "left";
@@ -398,16 +401,17 @@ function getAlignment(formationKey, options = {}) {
       q: { x: 500, y: 500 },
     };
 
+    // Z aligns in the backfield, slightly offset from the X/Y bunch toward the called side.
     if (resolvedBunchSide === "right") {
       return {
         ...common,
-        z: { x: 690, y: 372 },
+        z: { x: 560, y: 470 },
       };
     }
 
     return {
       ...common,
-      z: { x: 310, y: 452 },
+      z: { x: 440, y: 470 },
     };
   }
 
@@ -426,7 +430,20 @@ function getAlignment(formationKey, options = {}) {
 }
 
 function getSnapshotAlignment(snapshot) {
-  return getAlignment(snapshot.formation, snapshot);
+  const base = getAlignment(snapshot.formation, snapshot);
+  const overrides = snapshot.alignmentOverrides;
+  if (!overrides) {
+    return base;
+  }
+
+  const merged = { ...base };
+  allPlayers.forEach((player) => {
+    const spot = overrides[player];
+    if (spot && Number.isFinite(spot.x) && Number.isFinite(spot.y)) {
+      merged[player] = { x: spot.x, y: spot.y };
+    }
+  });
+  return merged;
 }
 
 function currentPlaySnapshot() {
@@ -436,6 +453,7 @@ function currentPlaySnapshot() {
     bunchSide,
     proMotion,
     routeOverrides: cloneRouteOverrides(routeOverrides),
+    alignmentOverrides: cloneAlignmentOverrides(alignmentOverrides),
     concepts: getCurrentConcepts(),
   };
 }
@@ -447,6 +465,7 @@ function applySnapshot(snapshot) {
   bunchSide = normalized.bunchSide;
   proMotion = normalized.proMotion;
   routeOverrides = normalized.routeOverrides;
+  alignmentOverrides = normalized.alignmentOverrides;
   applyConcepts(normalized.concepts);
   setPlayCode(normalized.code, { preserveOverrides: true });
 }
@@ -458,6 +477,7 @@ function normalizeSnapshot(snapshot) {
     bunchSide: normalizeBunchSide(snapshot?.bunchSide),
     proMotion: normalizeProMotion(snapshot?.proMotion),
     routeOverrides: normalizeRouteOverrides(snapshot?.routeOverrides),
+    alignmentOverrides: normalizeAlignmentOverrides(snapshot?.alignmentOverrides),
     concepts: normalizeConcepts(snapshot?.concepts),
   };
 }
@@ -595,6 +615,52 @@ function setRouteOverride(player, points) {
   routeOverrides = {
     ...routeOverrides,
     [player]: overrides,
+  };
+}
+
+function normalizeAlignmentOverrides(value) {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  return allPlayers.reduce((accumulator, player) => {
+    const spot = value[player];
+    if (!spot || typeof spot !== "object") {
+      return accumulator;
+    }
+    const x = Number(spot.x);
+    const y = Number(spot.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      accumulator[player] = {
+        x: clamp(x, 0, fieldWidth),
+        y: clamp(y, 0, fieldHeight),
+      };
+    }
+    return accumulator;
+  }, {});
+}
+
+function cloneAlignmentOverrides(value = alignmentOverrides) {
+  return normalizeAlignmentOverrides(value);
+}
+
+function clearAlignmentOverrides(players = allPlayers) {
+  if (players.length === allPlayers.length) {
+    alignmentOverrides = {};
+    return;
+  }
+  players.forEach((player) => {
+    delete alignmentOverrides[player];
+  });
+}
+
+function setAlignmentOverride(player, spot) {
+  alignmentOverrides = {
+    ...alignmentOverrides,
+    [player]: {
+      x: Math.round(clamp(spot.x, 0, fieldWidth)),
+      y: Math.round(clamp(spot.y, 0, fieldHeight)),
+    },
   };
 }
 
@@ -1612,22 +1678,25 @@ function drawRouteHandles(target, snapshot) {
   });
 }
 
-function drawPlayers(target, snapshot, positions) {
+function drawPlayers(target, snapshot, positions, interactive = false) {
   const alignment = getSnapshotAlignment(snapshot);
   const routeMap = { x: snapshot.code[0], y: snapshot.code[1], z: snapshot.code[2], c: snapshot.code[3], q: "QB" };
   const currentPositions = positions || alignment;
 
   Object.entries(currentPositions).forEach(([player, position]) => {
-    target.appendChild(
-      createSvgElement("circle", {
-        cx: position.x,
-        cy: position.y,
-        r: player === "q" ? 24 : 22,
-        fill: playerColors[player],
-        stroke: "rgba(255,255,255,0.9)",
-        "stroke-width": 4,
-      }),
-    );
+    const circleAttrs = {
+      cx: position.x,
+      cy: position.y,
+      r: player === "q" ? 24 : 22,
+      fill: playerColors[player],
+      stroke: "rgba(255,255,255,0.9)",
+      "stroke-width": 4,
+    };
+    if (interactive) {
+      circleAttrs["data-player-move"] = player;
+      circleAttrs.cursor = "grab";
+    }
+    target.appendChild(createSvgElement("circle", circleAttrs));
 
     const label = createSvgElement("text", {
       x: position.x,
@@ -1637,6 +1706,7 @@ function drawPlayers(target, snapshot, positions) {
       "font-size": player === "q" ? "26" : "24",
       "letter-spacing": "0.08em",
       fill: "#ffffff",
+      "pointer-events": "none",
     });
     label.textContent = player.toUpperCase();
     target.appendChild(label);
@@ -1651,6 +1721,7 @@ function drawPlayers(target, snapshot, positions) {
       "font-size": "18",
       "font-weight": "700",
       fill: "#fff7eb",
+      "pointer-events": "none",
     });
     tag.textContent = player === "q" ? "snap / drop" : `${routeMap[player]} - ${routeTree[routeMap[player]]}`;
     target.appendChild(tag);
@@ -1698,8 +1769,9 @@ function renderField(target, snapshot, simulation = null) {
     return;
   }
 
-  drawPlayers(target, snapshot);
-  if (target === fieldSvg && activeMode === "compose") {
+  const interactive = target === fieldSvg && activeMode === "compose";
+  drawPlayers(target, snapshot, undefined, interactive);
+  if (interactive) {
     drawRouteHandles(target, snapshot);
   }
 }
@@ -1979,6 +2051,47 @@ function releaseRouteDrag(pointerId) {
   activeRouteDrag = null;
 }
 
+function updateDraggedPlayer(event) {
+  if (!activePlayerDrag || event.pointerId !== activePlayerDrag.pointerId) {
+    return;
+  }
+
+  const svgPoint = svgPointFromEvent(fieldSvg, event);
+  if (!svgPoint) {
+    return;
+  }
+
+  const nextX = clamp(activePlayerDrag.playerStart.x + (svgPoint.x - activePlayerDrag.pointerStart.x), 0, fieldWidth);
+  const nextY = clamp(activePlayerDrag.playerStart.y + (svgPoint.y - activePlayerDrag.pointerStart.y), 0, fieldHeight);
+  setAlignmentOverride(activePlayerDrag.player, { x: nextX, y: nextY });
+
+  // Translate any custom route arrows by the same delta so the whole route follows the player.
+  if (activePlayerDrag.routeStart) {
+    const deltaX = nextX - activePlayerDrag.playerStart.x;
+    const deltaY = nextY - activePlayerDrag.playerStart.y;
+    routeOverrides = {
+      ...routeOverrides,
+      [activePlayerDrag.player]: activePlayerDrag.routeStart.map((point) => [
+        clamp(point[0] + deltaX, 0, fieldWidth),
+        clamp(point[1] + deltaY, 0, fieldHeight),
+      ]),
+    };
+  }
+
+  render();
+}
+
+function releasePlayerDrag(pointerId) {
+  if (!activePlayerDrag || (pointerId !== undefined && activePlayerDrag.pointerId !== pointerId)) {
+    return;
+  }
+
+  if (typeof fieldSvg.hasPointerCapture === "function" && fieldSvg.hasPointerCapture(activePlayerDrag.pointerId)) {
+    fieldSvg.releasePointerCapture(activePlayerDrag.pointerId);
+  }
+  activePlayerDrag = null;
+}
+
 function handleFieldPointerDown(event) {
   if (activeMode !== "compose") {
     return;
@@ -1989,31 +2102,53 @@ function handleFieldPointerDown(event) {
   }
 
   const handle = event.target.closest("[data-route-player]");
-  if (!handle) {
+  if (handle) {
+    event.preventDefault();
+    stopSimulationSilently();
+    activeRouteDrag = {
+      pointerId: event.pointerId,
+      player: handle.getAttribute("data-route-player"),
+      pointIndex: Number(handle.getAttribute("data-route-point-index")),
+    };
+    fieldSvg.setPointerCapture(event.pointerId);
+    updateDraggedRoute(event);
     return;
   }
 
-  event.preventDefault();
-  stopSimulationSilently();
-  activeRouteDrag = {
-    pointerId: event.pointerId,
-    player: handle.getAttribute("data-route-player"),
-    pointIndex: Number(handle.getAttribute("data-route-point-index")),
-  };
-  fieldSvg.setPointerCapture(event.pointerId);
-  updateDraggedRoute(event);
+  const playerHandle = event.target.closest("[data-player-move]");
+  if (playerHandle) {
+    event.preventDefault();
+    stopSimulationSilently();
+    const player = playerHandle.getAttribute("data-player-move");
+    const svgPoint = svgPointFromEvent(fieldSvg, event);
+    const alignment = getSnapshotAlignment(currentPlaySnapshot());
+    const routeOverride = routeOverrides[player];
+    activePlayerDrag = {
+      pointerId: event.pointerId,
+      player,
+      pointerStart: { x: svgPoint.x, y: svgPoint.y },
+      playerStart: { x: alignment[player].x, y: alignment[player].y },
+      routeStart: Array.isArray(routeOverride) ? routeOverride.map((point) => [point[0], point[1]]) : null,
+    };
+    fieldSvg.setPointerCapture(event.pointerId);
+  }
 }
 
 function handleFieldPointerMove(event) {
   updateDraggedRoute(event);
+  updateDraggedPlayer(event);
 }
 
 function handleFieldPointerUp(event) {
-  if (!activeRouteDrag || event.pointerId !== activeRouteDrag.pointerId) {
+  const wasDragging =
+    (activeRouteDrag && activeRouteDrag.pointerId === event.pointerId) ||
+    (activePlayerDrag && activePlayerDrag.pointerId === event.pointerId);
+  if (!wasDragging) {
     return;
   }
 
   releaseRouteDrag(event.pointerId);
+  releasePlayerDrag(event.pointerId);
   render();
 }
 
@@ -2035,6 +2170,7 @@ function bindEvents() {
   formationSelect.addEventListener("change", () => {
     stopSimulationSilently();
     clearRouteOverrides();
+    clearAlignmentOverrides();
     render();
   });
 
@@ -2060,6 +2196,7 @@ function bindEvents() {
   randomPlayButton.addEventListener("click", () => {
     stopSimulationSilently();
     clearRouteOverrides();
+    clearAlignmentOverrides();
     const code = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join("");
     setPlayCode(code);
   });
@@ -2069,6 +2206,7 @@ function bindEvents() {
       bunchSide = normalizeBunchSide(button.dataset.bunchSide);
       stopSimulationSilently();
       clearRouteOverrides();
+      clearAlignmentOverrides();
       render();
     });
   });
@@ -2078,6 +2216,7 @@ function bindEvents() {
       proMotion = normalizeProMotion(button.dataset.proMotion);
       stopSimulationSilently();
       clearRouteOverrides(["z"]);
+      clearAlignmentOverrides(["z"]);
       render();
     });
   });
@@ -2087,6 +2226,7 @@ function bindEvents() {
       formationSelect.value = button.dataset.formation;
       stopSimulationSilently();
       clearRouteOverrides();
+      clearAlignmentOverrides();
       setPlayCode(button.dataset.code);
     });
   });
@@ -2114,8 +2254,9 @@ function bindEvents() {
   resetRoutesButton.addEventListener("click", () => {
     stopSimulationSilently();
     clearRouteOverrides();
+    clearAlignmentOverrides();
     render();
-    setSimulationStatus("Reset custom route arrows.");
+    setSimulationStatus("Reset custom routes and player spots.");
   });
   fieldSvg.addEventListener("wheel", (event) => {
     event.preventDefault();
