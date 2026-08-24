@@ -314,15 +314,19 @@ const bunchSideGroup = document.querySelector("#bunch-side-group");
 const bunchSideButtons = Array.from(document.querySelectorAll("[data-bunch-side]"));
 const proMotionGroup = document.querySelector("#pro-motion-group");
 const proMotionButtons = Array.from(document.querySelectorAll("[data-pro-motion]"));
-const sequenceNameInput = document.querySelector("#sequence-name-input");
-const saveSequenceButton = document.querySelector("#save-sequence-button");
-const addPlayButton = document.querySelector("#add-play-button");
-const sequenceStatus = document.querySelector("#sequence-status");
-const sequenceList = document.querySelector("#sequence-list");
+const savePlayName = document.querySelector("#save-play-name");
+const savePlayType = document.querySelector("#save-play-type");
+const savePlayButton = document.querySelector("#save-play-button");
+const savePlayStatus = document.querySelector("#save-play-status");
 const modeViews = Array.from(document.querySelectorAll("[data-mode-view]"));
 const playbookBrowseButtons = Array.from(document.querySelectorAll("[data-browse]"));
 const playbookFilter = document.querySelector("#playbook-filter");
 const playbookGroups = document.querySelector("#playbook-groups");
+const playbookSubnavButtons = Array.from(document.querySelectorAll("[data-subview]"));
+const subviewPanels = Array.from(document.querySelectorAll("[data-subview-panel]"));
+const newPlaybookName = document.querySelector("#new-playbook-name");
+const createPlaybookButton = document.querySelector("#create-playbook-button");
+const playbooksList = document.querySelector("#playbooks-list");
 const playFullscreen = document.querySelector("#play-fullscreen");
 const pfName = document.querySelector("#pf-name");
 const pfCode = document.querySelector("#pf-code");
@@ -330,6 +334,8 @@ const pfConcepts = document.querySelector("#pf-concepts");
 const pfField = document.querySelector("#pf-field");
 const pfClose = document.querySelector("#pf-close");
 const pfEdit = document.querySelector("#pf-edit");
+const pfDelete = document.querySelector("#pf-delete");
+const pfAddPlaybook = document.querySelector("#pf-add-playbook");
 let fullscreenPlay = null;
 
 const routeInputs = {
@@ -346,13 +352,17 @@ const conceptInputs = {
 };
 
 const svgNs = "http://www.w3.org/2000/svg";
-const storageKey = "flag-football-play-sequences";
+const customPlaysKey = "flag-football-custom-plays";
+const playbooksKey = "flag-football-playbooks";
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 let bunchSide = "left";
 let proMotion = "stay";
-let sequences = loadSequences();
+let customPlays = loadCustomPlays();
+let playbooks = loadPlaybooks();
+let playbookSubview = "plays";
+let openPickerBookId = null;
 let routeOverrides = {};
 let alignmentOverrides = {};
 let simulationFrameId = 0;
@@ -745,9 +755,9 @@ function updateFormationControls() {
   proMotionGroup.classList.toggle("is-hidden", formationSelect.value !== "pro");
 }
 
-function loadSequences() {
+function loadJson(key) {
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = window.localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -755,89 +765,291 @@ function loadSequences() {
   }
 }
 
-function persistSequences() {
-  window.localStorage.setItem(storageKey, JSON.stringify(sequences));
+function loadCustomPlays() {
+  return loadJson(customPlaysKey).map((play) => ({ ...normalizeSnapshot(play), id: play.id, name: play.name, type: play.type, custom: true }));
 }
 
-function setStatus(message) {
-  if (sequenceStatus) {
-    sequenceStatus.textContent = message;
-  }
+function persistCustomPlays() {
+  window.localStorage.setItem(customPlaysKey, JSON.stringify(customPlays));
+}
+
+function loadPlaybooks() {
+  return loadJson(playbooksKey)
+    .filter((book) => book && typeof book.name === "string")
+    .map((book) => ({
+      id: book.id || createId("book"),
+      name: book.name,
+      playIds: Array.isArray(book.playIds) ? book.playIds.filter((id) => typeof id === "string") : [],
+    }));
+}
+
+function persistPlaybooks() {
+  window.localStorage.setItem(playbooksKey, JSON.stringify(playbooks));
 }
 
 function setSimulationStatus(message) {
   simulationStatus.textContent = message;
 }
 
-function sanitizeSequenceName(value) {
-  return value.trim().slice(0, 40);
+function setSaveStatus(message) {
+  if (savePlayStatus) {
+    savePlayStatus.textContent = message;
+  }
 }
 
-function findNamedSequence() {
-  const name = sanitizeSequenceName(sequenceNameInput.value);
+function sanitizeName(value) {
+  return String(value || "").trim().slice(0, 40);
+}
+
+function createId(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// Every play the app knows about: the built-in install plus the user's saved plays.
+function allPlays() {
+  return playLibrary.concat(customPlays);
+}
+
+function findAnyPlay(id) {
+  return allPlays().find((play) => play.id === id) || null;
+}
+
+function saveCurrentPlay() {
+  const name = sanitizeName(savePlayName?.value);
   if (!name) {
+    setSaveStatus("Enter a play name before saving.");
+    savePlayName?.focus();
+    return;
+  }
+
+  const type = savePlayType && playTypeLibrary[savePlayType.value] ? savePlayType.value : "pass";
+  const snapshot = normalizeSnapshot(currentPlaySnapshot());
+  const existing = customPlays.find((play) => play.name.toLowerCase() === name.toLowerCase());
+  const play = { ...snapshot, name, type, custom: true, id: existing ? existing.id : createId("custom") };
+
+  if (existing) {
+    customPlays = customPlays.map((entry) => (entry.id === existing.id ? play : entry));
+    setSaveStatus(`Updated “${name}” in your library.`);
+  } else {
+    customPlays = [play, ...customPlays];
+    setSaveStatus(`Saved “${name}” to your library.`);
+  }
+
+  persistCustomPlays();
+  renderPlaybookLibrary();
+  renderPlaybooks();
+}
+
+function deleteCustomPlay(id) {
+  const play = customPlays.find((entry) => entry.id === id);
+  customPlays = customPlays.filter((entry) => entry.id !== id);
+  persistCustomPlays();
+  // Drop the play from any playbooks that referenced it.
+  playbooks = playbooks.map((book) => ({ ...book, playIds: book.playIds.filter((pid) => pid !== id) }));
+  persistPlaybooks();
+  renderPlaybookLibrary();
+  renderPlaybooks();
+  if (play) {
+    setSaveStatus(`Deleted “${play.name}”.`);
+  }
+}
+
+function createPlaybook(name) {
+  const clean = sanitizeName(name);
+  if (!clean) {
     return null;
   }
-  return sequences.find((sequence) => sequence.name.toLowerCase() === name.toLowerCase()) || null;
+  const existing = playbooks.find((book) => book.name.toLowerCase() === clean.toLowerCase());
+  if (existing) {
+    return existing;
+  }
+  const book = { id: createId("book"), name: clean, playIds: [] };
+  playbooks = [book, ...playbooks];
+  persistPlaybooks();
+  return book;
 }
 
-function renderSequences() {
-  if (!sequenceList) {
+function deletePlaybook(id) {
+  playbooks = playbooks.filter((book) => book.id !== id);
+  persistPlaybooks();
+  renderPlaybooks();
+  refreshFullscreenPlaybookOptions();
+}
+
+function addPlayToPlaybook(bookId, playId) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book || book.playIds.includes(playId)) {
+    return false;
+  }
+  book.playIds = [...book.playIds, playId];
+  persistPlaybooks();
+  renderPlaybooks();
+  return true;
+}
+
+function removePlayFromPlaybook(bookId, playId) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book) {
     return;
   }
-  if (sequences.length === 0) {
-    sequenceList.innerHTML = '<p class="field-help">No saved sequences yet.</p>';
+  book.playIds = book.playIds.filter((id) => id !== playId);
+  persistPlaybooks();
+  renderPlaybooks();
+}
+
+function renderPlaybookSubview() {
+  playbookSubnavButtons.forEach((button) => {
+    const isActive = button.dataset.subview === playbookSubview;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+  subviewPanels.forEach((panel) => {
+    panel.classList.toggle("is-hidden", panel.dataset.subviewPanel !== playbookSubview);
+  });
+}
+
+function renderPlaybooks() {
+  if (!playbooksList) {
     return;
   }
 
-  sequenceList.innerHTML = sequences
-    .map(
-      (sequence, sequenceIndex) => `
-        <section class="sequence-card">
-          <div class="sequence-header">
+  if (playbooks.length === 0) {
+    playbooksList.innerHTML = '<p class="field-help">No playbooks yet. Name one above to start grouping plays.</p>';
+    return;
+  }
+
+  playbooksList.innerHTML = playbooks
+    .map((book) => {
+      const plays = book.playIds.map(findAnyPlay).filter(Boolean);
+      const playRows = plays.length === 0
+        ? '<p class="field-help">No plays yet — use “Add plays”.</p>'
+        : plays
+            .map(
+              (play) => `
+                <div class="book-play" data-open-play="${escapeHtml(play.id)}" role="button" tabindex="0">
+                  <span class="book-play-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
+                  <span class="book-play-name">${escapeHtml(play.name)}</span>
+                  <button class="book-remove" type="button" data-remove="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Remove ${escapeHtml(play.name)}">✕</button>
+                </div>
+              `,
+            )
+            .join("");
+
+      return `
+        <section class="book-card" data-book="${escapeHtml(book.id)}">
+          <div class="book-header">
             <div>
-              <strong>${escapeHtml(sequence.name)}</strong>
-              <div class="sequence-meta">${sequence.plays.length} play${sequence.plays.length === 1 ? "" : "s"}</div>
+              <strong>${escapeHtml(book.name)}</strong>
+              <div class="book-meta">${plays.length} play${plays.length === 1 ? "" : "s"}</div>
             </div>
-            <button class="secondary-button" type="button" data-delete-sequence="${sequenceIndex}">Delete</button>
+            <div class="book-actions">
+              <button class="secondary-button book-add-toggle" type="button" data-add-toggle="${escapeHtml(book.id)}">Add plays</button>
+              <button class="secondary-button" type="button" data-export-book="${escapeHtml(book.id)}">Export PPTX</button>
+              <button class="secondary-button book-delete" type="button" data-delete-book="${escapeHtml(book.id)}">Delete</button>
+            </div>
           </div>
-          <div class="sequence-play-list">
-            ${sequence.plays
-              .map(
-                (play, playIndex) => `
-                  <div class="sequence-play">
-                    <span class="sequence-play-code">${normalizeSnapshot(play).code}</span>
-                    <div>
-                      <span>${escapeHtml(formationSetupText(play))}</span>
-                      <div class="sequence-note">${escapeHtml(formatConceptSummary(normalizeSnapshot(play).concepts))}</div>
-                    </div>
-                    <button type="button" data-load-sequence-play="${sequenceIndex}:${playIndex}">Load</button>
-                  </div>
-                `,
-              )
-              .join("")}
-          </div>
+          <div class="book-play-list">${playRows}</div>
+          <div class="book-picker is-hidden" data-picker="${escapeHtml(book.id)}"></div>
         </section>
+      `;
+    })
+    .join("");
+
+  bindPlaybookListEvents();
+
+  // Keep an open "Add plays" picker open across adds so several plays can be added in a row.
+  if (openPickerBookId) {
+    const picker = playbooksList.querySelector(`[data-picker="${openPickerBookId}"]`);
+    if (picker) {
+      renderBookPicker(picker, openPickerBookId);
+      picker.classList.remove("is-hidden");
+    } else {
+      openPickerBookId = null;
+    }
+  }
+}
+
+function bindPlaybookListEvents() {
+  playbooksList.querySelectorAll("[data-delete-book]").forEach((button) => {
+    button.addEventListener("click", () => deletePlaybook(button.dataset.deleteBook));
+  });
+
+  playbooksList.querySelectorAll("[data-export-book]").forEach((button) => {
+    button.addEventListener("click", () => exportPlaybook(button.dataset.exportBook));
+  });
+
+  playbooksList.querySelectorAll("[data-remove]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const [bookId, playId] = button.dataset.remove.split(":");
+      removePlayFromPlaybook(bookId, playId);
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-open-play]").forEach((row) => {
+    const open = () => {
+      const play = findAnyPlay(row.dataset.openPlay);
+      if (play) {
+        openPlayFullscreen(play);
+      }
+    };
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-add-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openPickerBookId = openPickerBookId === button.dataset.addToggle ? null : button.dataset.addToggle;
+      renderPlaybooks();
+    });
+  });
+}
+
+function renderBookPicker(picker, bookId) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  const available = allPlays().filter((play) => !book.playIds.includes(play.id));
+  if (available.length === 0) {
+    picker.innerHTML = '<p class="field-help">Every play is already in this book.</p>';
+    return;
+  }
+
+  picker.innerHTML = available
+    .map(
+      (play) => `
+        <button class="picker-row" type="button" data-add-play="${escapeHtml(bookId)}:${escapeHtml(play.id)}">
+          <span class="picker-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
+          <span class="picker-name">${escapeHtml(play.name)}</span>
+          <span class="picker-tag">${escapeHtml(formationLibrary[play.formation].label)}</span>
+          <span class="picker-plus">＋</span>
+        </button>
       `,
     )
     .join("");
 
-  sequenceList.querySelectorAll("[data-delete-sequence]").forEach((button) => {
+  picker.querySelectorAll("[data-add-play]").forEach((button) => {
     button.addEventListener("click", () => {
-      sequences.splice(Number(button.dataset.deleteSequence), 1);
-      persistSequences();
-      renderSequences();
-      setStatus("Sequence deleted.");
+      const [id, playId] = button.dataset.addPlay.split(":");
+      addPlayToPlaybook(id, playId);
     });
   });
+}
 
-  sequenceList.querySelectorAll("[data-load-sequence-play]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const [sequenceIndex, playIndex] = button.dataset.loadSequencePlay.split(":").map(Number);
-      applySnapshot(sequences[sequenceIndex].plays[playIndex]);
-      setStatus(`Loaded ${sequences[sequenceIndex].name} play ${playIndex + 1}.`);
-    });
-  });
+function exportPlaybook(bookId) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book) {
+    return;
+  }
+  const plays = book.playIds.map(findAnyPlay).filter(Boolean).map((play) => normalizeSnapshot(play));
+  if (plays.length === 0) {
+    setSimulationStatus("Add plays to the playbook before exporting.");
+    return;
+  }
+  exportPptx({ title: book.name, plays });
 }
 
 function playbookDimension() {
@@ -897,6 +1109,8 @@ function createPlaybookCard(play, groupKey) {
     ? `<span class="playbook-badge" data-badge="formation">${escapeHtml(formationLibrary[play.formation].label)}</span>`
     : `<span class="playbook-badge" data-badge="type">${escapeHtml(playTypeLibrary[play.type].label)}</span>`;
 
+  const savedBadge = play.custom ? '<span class="playbook-badge" data-badge="saved">Saved</span>' : "";
+
   const body = document.createElement("div");
   body.className = "playbook-card-body";
   body.innerHTML = `
@@ -906,6 +1120,7 @@ function createPlaybookCard(play, groupKey) {
     </div>
     <div class="playbook-meta">
       ${badge}
+      ${savedBadge}
       <span class="playbook-card-note">${escapeHtml(formatConceptSummary(play.concepts))}</span>
     </div>
   `;
@@ -937,9 +1152,10 @@ function renderPlaybookLibrary() {
     (category) => playbookFilterValue === "all" || category === playbookFilterValue,
   );
 
+  const everyPlay = allPlays();
   playbookGroups.innerHTML = "";
   categories.forEach((category) => {
-    const plays = playLibrary.filter((play) => play[key] === category);
+    const plays = everyPlay.filter((play) => play[key] === category);
     if (plays.length === 0) {
       return;
     }
@@ -966,7 +1182,7 @@ function renderPlaybookLibrary() {
 }
 
 function openLibraryPlay(id) {
-  const play = playLibrary.find((entry) => entry.id === id);
+  const play = findAnyPlay(id);
   if (!play) {
     return;
   }
@@ -985,11 +1201,65 @@ function openPlayFullscreen(play) {
   pfConcepts.textContent = formatConceptSummary(snapshot.concepts);
   renderField(pfField, snapshot);
 
+  if (pfDelete) {
+    pfDelete.classList.toggle("is-hidden", !play.custom);
+  }
+  refreshFullscreenPlaybookOptions();
+
   // A fixed, viewport-filling overlay is the reliable "full screen" across devices —
   // iOS Safari (the iPad target) does not support Element.requestFullscreen.
   playFullscreen.classList.remove("is-hidden");
   document.body.classList.add("is-fullscreen-open");
   pfClose?.focus();
+}
+
+function refreshFullscreenPlaybookOptions() {
+  if (!pfAddPlaybook) {
+    return;
+  }
+  const options = ['<option value="">Add to playbook…</option>']
+    .concat(playbooks.map((book) => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.name)}</option>`))
+    .concat('<option value="__new__">＋ New playbook…</option>');
+  pfAddPlaybook.innerHTML = options.join("");
+  pfAddPlaybook.value = "";
+}
+
+function handleAddToPlaybookChange() {
+  if (!pfAddPlaybook || !fullscreenPlay) {
+    return;
+  }
+  const value = pfAddPlaybook.value;
+  if (!value) {
+    return;
+  }
+
+  let bookId = value;
+  if (value === "__new__") {
+    const name = sanitizeName(window.prompt("Name the new playbook:", ""));
+    if (!name) {
+      pfAddPlaybook.value = "";
+      return;
+    }
+    const book = createPlaybook(name);
+    bookId = book.id;
+    refreshFullscreenPlaybookOptions();
+  }
+
+  const added = addPlayToPlaybook(bookId, fullscreenPlay.id);
+  const book = playbooks.find((entry) => entry.id === bookId);
+  pfConcepts.textContent = added
+    ? `Added to ${book ? book.name : "playbook"}.`
+    : `Already in ${book ? book.name : "playbook"}.`;
+  pfAddPlaybook.value = "";
+}
+
+function deleteFullscreenPlay() {
+  if (!fullscreenPlay || !fullscreenPlay.custom) {
+    return;
+  }
+  const id = fullscreenPlay.id;
+  closePlayFullscreen();
+  deleteCustomPlay(id);
 }
 
 function closePlayFullscreen() {
@@ -1008,6 +1278,14 @@ function editFullscreenPlay() {
   const play = fullscreenPlay;
   closePlayFullscreen();
   applySnapshot(play);
+  // Prefill the save form so editing an existing play saves back over it.
+  if (savePlayName) {
+    savePlayName.value = play.name || "";
+  }
+  if (savePlayType && play.type && playTypeLibrary[play.type]) {
+    savePlayType.value = play.type;
+  }
+  setSaveStatus(play.custom ? `Editing “${play.name}”. Save to update it.` : `Editing ${play.name}. Save to add it to your library.`);
   setActiveMode("compose");
 }
 
@@ -2231,11 +2509,58 @@ function bindEvents() {
     });
   });
 
+  if (savePlayButton) {
+    savePlayButton.addEventListener("click", saveCurrentPlay);
+  }
+  if (savePlayName) {
+    savePlayName.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveCurrentPlay();
+      }
+    });
+  }
+
+  playbookSubnavButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      playbookSubview = button.dataset.subview === "books" ? "books" : "plays";
+      renderPlaybookSubview();
+    });
+  });
+
+  if (createPlaybookButton) {
+    const create = () => {
+      const book = createPlaybook(newPlaybookName?.value);
+      if (!book) {
+        return;
+      }
+      if (newPlaybookName) {
+        newPlaybookName.value = "";
+      }
+      renderPlaybooks();
+    };
+    createPlaybookButton.addEventListener("click", create);
+    if (newPlaybookName) {
+      newPlaybookName.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          create();
+        }
+      });
+    }
+  }
+
   if (pfClose) {
     pfClose.addEventListener("click", closePlayFullscreen);
   }
   if (pfEdit) {
     pfEdit.addEventListener("click", editFullscreenPlay);
+  }
+  if (pfDelete) {
+    pfDelete.addEventListener("click", deleteFullscreenPlay);
+  }
+  if (pfAddPlaybook) {
+    pfAddPlaybook.addEventListener("change", handleAddToPlaybookChange);
   }
   if (playFullscreen) {
     document.addEventListener("keydown", (event) => {
@@ -2268,7 +2593,7 @@ function bindEvents() {
   fieldSvg.addEventListener("pointerup", handleFieldPointerUp);
   fieldSvg.addEventListener("pointercancel", handleFieldPointerUp);
   exportSvgButton.addEventListener("click", copyPlaySvg);
-  exportPptxButton.addEventListener("click", exportPptx);
+  exportPptxButton.addEventListener("click", () => exportPptx());
 }
 
 function distance(left, right) {
@@ -2289,14 +2614,6 @@ function escapeHtml(value) {
 }
 
 function collectExportPlays() {
-  const namedSequence = findNamedSequence();
-  if (namedSequence) {
-    return {
-      title: namedSequence.name,
-      plays: namedSequence.plays.map((play) => normalizeSnapshot(play)),
-    };
-  }
-
   const snapshot = currentPlaySnapshot();
   return {
     title: `${snapshot.formation} ${snapshot.code}`,
@@ -2452,8 +2769,7 @@ async function copyPlaySvg() {
   setSimulationStatus("Clipboard access is unavailable in this browser context.");
 }
 
-function exportPptx() {
-  const exportSet = collectExportPlays();
+function exportPptx(exportSet = collectExportPlays()) {
   const { reports, files } = buildSvgExportSet(exportSet);
   const svgFiles = files.map((file, index) => ({
     name: `ppt/media/image${index + 1}.svg`,
@@ -2919,5 +3235,7 @@ bindEvents();
 syncSelectorsFromCode(getPlayCode());
 applyConcepts({});
 renderPlaybookLibrary();
+renderPlaybooks();
+renderPlaybookSubview();
 registerAppShell();
 render();

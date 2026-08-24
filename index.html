@@ -120,6 +120,29 @@
             </label>
           </div>
 
+          <div class="save-play">
+            <div class="panel-heading compact">
+              <h3>Save Play</h3>
+              <p>Store the current call — routes, player spots, and concepts — in your library.</p>
+            </div>
+            <label class="field-label" for="save-play-name">Play Name</label>
+            <input id="save-play-name" type="text" maxlength="40" placeholder="Bunch Smash Right">
+            <div class="save-play-row">
+              <label>
+                <span>Type</span>
+                <select id="save-play-type">
+                  <option value="pass">Pass</option>
+                  <option value="run">Run</option>
+                  <option value="option">Option</option>
+                  <option value="trick">Trick</option>
+                  <option value="goalline">Goal Line</option>
+                </select>
+              </label>
+              <button id="save-play-button" type="button">Save Play</button>
+            </div>
+            <div id="save-play-status" class="save-play-status" aria-live="polite"></div>
+          </div>
+
           <div class="quick-plays">
             <div class="panel-heading compact">
               <h3>Quick Plays</h3>
@@ -199,12 +222,19 @@
       </div>
 
       <section class="playbook-view is-hidden" data-mode-view="playbooks">
-        <div class="panel playbook-panel">
+        <div class="playbook-subnav">
+          <div class="segmented-control" id="playbook-subnav" role="group" aria-label="Playbook views">
+            <button class="segment-button is-active" type="button" data-subview="plays">Plays</button>
+            <button class="segment-button" type="button" data-subview="books">Playbooks</button>
+          </div>
+        </div>
+
+        <div class="panel playbook-panel" data-subview-panel="plays">
           <div class="playbook-heading">
             <div class="playbook-heading-copy">
               <p class="stage-kicker">Team Playbook</p>
               <h2>Playbook Library</h2>
-              <p class="intro">Browse the base install by formation or by play type, then tap any card to view the play full screen.</p>
+              <p class="intro">Browse the install and your saved plays by formation or play type. Tap any card to view it full screen.</p>
             </div>
             <div class="browse-toggle-wrap">
               <span class="field-label">Browse by</span>
@@ -216,6 +246,21 @@
           </div>
           <div class="playbook-filter" id="playbook-filter" role="group" aria-label="Filter plays"></div>
           <div class="playbook-groups" id="playbook-groups"></div>
+        </div>
+
+        <div class="panel playbooks-panel is-hidden" data-subview-panel="books">
+          <div class="playbook-heading">
+            <div class="playbook-heading-copy">
+              <p class="stage-kicker">Playbooks</p>
+              <h2>Your Playbooks</h2>
+              <p class="intro">Group plays into named books — a script, a package, a game plan. Add any play from the library or your saved plays.</p>
+            </div>
+            <div class="new-playbook-row">
+              <input id="new-playbook-name" type="text" maxlength="40" placeholder="Opening Script">
+              <button id="create-playbook-button" type="button">Create Playbook</button>
+            </div>
+          </div>
+          <div id="playbooks-list" class="playbooks-list"></div>
         </div>
       </section>
     </main>
@@ -231,7 +276,11 @@
         </div>
       </div>
       <div class="pf-actions">
+        <select id="pf-add-playbook" class="pf-add-playbook" aria-label="Add to playbook">
+          <option value="">Add to playbook…</option>
+        </select>
         <button id="pf-edit" class="secondary-button" type="button">Edit in Studio</button>
+        <button id="pf-delete" class="secondary-button pf-delete is-hidden" type="button">Delete</button>
         <button id="pf-close" type="button">Close</button>
       </div>
     </div>
