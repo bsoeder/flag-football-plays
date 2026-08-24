@@ -1,4 +1,4 @@
-const cacheName = "flag-football-play-studio-v5";
+const cacheName = "flag-football-play-studio-v6";
 const appShell = [
   "./",
   "./index.html",

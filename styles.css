@@ -876,10 +876,27 @@ body.is-fullscreen-open {
   flex-wrap: wrap;
 }
 
-.pf-title h2 {
+.pf-name-input {
+  width: min(560px, 70vw);
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 247, 235, 0.06);
   color: #fff7eb;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.03em;
   font-size: clamp(1.5rem, 3.4vw, 2.6rem);
-  line-height: 1;
+  line-height: 1.1;
+}
+
+.pf-name-input:hover {
+  border-color: rgba(255, 247, 235, 0.28);
+}
+
+.pf-name-input:focus {
+  outline: none;
+  background: rgba(255, 247, 235, 0.12);
+  border-color: var(--accent);
 }
 
 .pf-meta {
@@ -888,6 +905,12 @@ body.is-fullscreen-open {
   gap: 14px;
   margin-top: 8px;
   flex-wrap: wrap;
+}
+
+.pf-status {
+  color: #9ad87c;
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .pf-code {

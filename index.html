@@ -269,10 +269,11 @@
   <div id="play-fullscreen" class="play-fullscreen is-hidden" role="dialog" aria-modal="true" aria-label="Play view">
     <div class="pf-topbar">
       <div class="pf-title">
-        <h2 id="pf-name">Play</h2>
+        <input id="pf-name-input" class="pf-name-input" type="text" maxlength="40" aria-label="Play name" title="Edit play name">
         <div class="pf-meta">
           <span id="pf-code" class="pf-code"></span>
           <span id="pf-concepts" class="pf-concepts"></span>
+          <span id="pf-status" class="pf-status" aria-live="polite"></span>
         </div>
       </div>
       <div class="pf-actions">

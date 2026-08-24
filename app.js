@@ -328,9 +328,10 @@ const newPlaybookName = document.querySelector("#new-playbook-name");
 const createPlaybookButton = document.querySelector("#create-playbook-button");
 const playbooksList = document.querySelector("#playbooks-list");
 const playFullscreen = document.querySelector("#play-fullscreen");
-const pfName = document.querySelector("#pf-name");
+const pfNameInput = document.querySelector("#pf-name-input");
 const pfCode = document.querySelector("#pf-code");
 const pfConcepts = document.querySelector("#pf-concepts");
+const pfStatus = document.querySelector("#pf-status");
 const pfField = document.querySelector("#pf-field");
 const pfClose = document.querySelector("#pf-close");
 const pfEdit = document.querySelector("#pf-edit");
@@ -354,6 +355,7 @@ const conceptInputs = {
 const svgNs = "http://www.w3.org/2000/svg";
 const customPlaysKey = "flag-football-custom-plays";
 const playbooksKey = "flag-football-playbooks";
+const nameOverridesKey = "flag-football-name-overrides";
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -361,6 +363,7 @@ let bunchSide = "left";
 let proMotion = "stay";
 let customPlays = loadCustomPlays();
 let playbooks = loadPlaybooks();
+let nameOverrides = loadNameOverrides();
 let playbookSubview = "plays";
 let openPickerBookId = null;
 let routeOverrides = {};
@@ -805,6 +808,20 @@ function createId(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function loadNameOverrides() {
+  try {
+    const raw = window.localStorage.getItem(nameOverridesKey);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistNameOverrides() {
+  window.localStorage.setItem(nameOverridesKey, JSON.stringify(nameOverrides));
+}
+
 // Every play the app knows about: the built-in install plus the user's saved plays.
 function allPlays() {
   return playLibrary.concat(customPlays);
@@ -812,6 +829,35 @@ function allPlays() {
 
 function findAnyPlay(id) {
   return allPlays().find((play) => play.id === id) || null;
+}
+
+// The name to show for a play — a user rename wins over the play's own name.
+function displayName(play) {
+  if (!play) {
+    return "";
+  }
+  const override = nameOverrides[play.id];
+  return override && override.trim() ? override : play.name;
+}
+
+function renamePlay(id, rawName) {
+  const play = findAnyPlay(id);
+  if (!play) {
+    return;
+  }
+  const clean = sanitizeName(rawName);
+  if (!clean) {
+    return;
+  }
+
+  if (clean === play.name) {
+    delete nameOverrides[id];
+  } else {
+    nameOverrides[id] = clean;
+  }
+  persistNameOverrides();
+  renderPlaybookLibrary();
+  renderPlaybooks();
 }
 
 function saveCurrentPlay() {
@@ -842,15 +888,20 @@ function saveCurrentPlay() {
 
 function deleteCustomPlay(id) {
   const play = customPlays.find((entry) => entry.id === id);
+  const shownName = play ? displayName(play) : "";
   customPlays = customPlays.filter((entry) => entry.id !== id);
   persistCustomPlays();
+  if (nameOverrides[id]) {
+    delete nameOverrides[id];
+    persistNameOverrides();
+  }
   // Drop the play from any playbooks that referenced it.
   playbooks = playbooks.map((book) => ({ ...book, playIds: book.playIds.filter((pid) => pid !== id) }));
   persistPlaybooks();
   renderPlaybookLibrary();
   renderPlaybooks();
   if (play) {
-    setSaveStatus(`Deleted “${play.name}”.`);
+    setSaveStatus(`Deleted “${shownName}”.`);
   }
 }
 
@@ -928,8 +979,8 @@ function renderPlaybooks() {
               (play) => `
                 <div class="book-play" data-open-play="${escapeHtml(play.id)}" role="button" tabindex="0">
                   <span class="book-play-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
-                  <span class="book-play-name">${escapeHtml(play.name)}</span>
-                  <button class="book-remove" type="button" data-remove="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Remove ${escapeHtml(play.name)}">✕</button>
+                  <span class="book-play-name">${escapeHtml(displayName(play))}</span>
+                  <button class="book-remove" type="button" data-remove="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Remove ${escapeHtml(displayName(play))}">✕</button>
                 </div>
               `,
             )
@@ -1023,7 +1074,7 @@ function renderBookPicker(picker, bookId) {
       (play) => `
         <button class="picker-row" type="button" data-add-play="${escapeHtml(bookId)}:${escapeHtml(play.id)}">
           <span class="picker-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
-          <span class="picker-name">${escapeHtml(play.name)}</span>
+          <span class="picker-name">${escapeHtml(displayName(play))}</span>
           <span class="picker-tag">${escapeHtml(formationLibrary[play.formation].label)}</span>
           <span class="picker-plus">＋</span>
         </button>
@@ -1086,7 +1137,7 @@ function playbookThumbnail(play) {
     viewBox: "0 0 1000 600",
     class: "play-thumb",
     role: "img",
-    "aria-label": `${play.name} diagram`,
+    "aria-label": `${displayName(play)} diagram`,
   });
   renderField(svg, normalizeSnapshot(play));
   return svg;
@@ -1097,7 +1148,7 @@ function createPlaybookCard(play, groupKey) {
   card.className = "playbook-card";
   card.setAttribute("role", "button");
   card.setAttribute("tabindex", "0");
-  card.title = `Open ${play.name} in the studio`;
+  card.title = `Open ${displayName(play)} full screen`;
 
   const thumb = document.createElement("div");
   thumb.className = "playbook-thumb-shell";
@@ -1115,7 +1166,7 @@ function createPlaybookCard(play, groupKey) {
   body.className = "playbook-card-body";
   body.innerHTML = `
     <div class="playbook-card-head">
-      <strong>${escapeHtml(play.name)}</strong>
+      <strong>${escapeHtml(displayName(play))}</strong>
       <span class="playbook-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
     </div>
     <div class="playbook-meta">
@@ -1196,9 +1247,14 @@ function openPlayFullscreen(play) {
 
   fullscreenPlay = play;
   const snapshot = normalizeSnapshot(play);
-  pfName.textContent = play.name;
+  if (pfNameInput) {
+    pfNameInput.value = displayName(play);
+  }
   pfCode.textContent = snapshot.code;
   pfConcepts.textContent = formatConceptSummary(snapshot.concepts);
+  if (pfStatus) {
+    pfStatus.textContent = "";
+  }
   renderField(pfField, snapshot);
 
   if (pfDelete) {
@@ -1247,9 +1303,11 @@ function handleAddToPlaybookChange() {
 
   const added = addPlayToPlaybook(bookId, fullscreenPlay.id);
   const book = playbooks.find((entry) => entry.id === bookId);
-  pfConcepts.textContent = added
-    ? `Added to ${book ? book.name : "playbook"}.`
-    : `Already in ${book ? book.name : "playbook"}.`;
+  if (pfStatus) {
+    pfStatus.textContent = added
+      ? `Added to ${book ? book.name : "playbook"}.`
+      : `Already in ${book ? book.name : "playbook"}.`;
+  }
   pfAddPlaybook.value = "";
 }
 
@@ -1260,6 +1318,27 @@ function deleteFullscreenPlay() {
   const id = fullscreenPlay.id;
   closePlayFullscreen();
   deleteCustomPlay(id);
+}
+
+function commitFullscreenRename() {
+  if (!fullscreenPlay || !pfNameInput) {
+    return;
+  }
+  const clean = sanitizeName(pfNameInput.value);
+  if (!clean) {
+    // Empty name: revert the field to the current display name, change nothing.
+    pfNameInput.value = displayName(fullscreenPlay);
+    return;
+  }
+  if (clean === displayName(fullscreenPlay)) {
+    pfNameInput.value = clean;
+    return;
+  }
+  renamePlay(fullscreenPlay.id, clean);
+  pfNameInput.value = displayName(fullscreenPlay);
+  if (pfStatus) {
+    pfStatus.textContent = "Renamed.";
+  }
 }
 
 function closePlayFullscreen() {
@@ -1279,13 +1358,14 @@ function editFullscreenPlay() {
   closePlayFullscreen();
   applySnapshot(play);
   // Prefill the save form so editing an existing play saves back over it.
+  const shownName = displayName(play);
   if (savePlayName) {
-    savePlayName.value = play.name || "";
+    savePlayName.value = shownName || "";
   }
   if (savePlayType && play.type && playTypeLibrary[play.type]) {
     savePlayType.value = play.type;
   }
-  setSaveStatus(play.custom ? `Editing “${play.name}”. Save to update it.` : `Editing ${play.name}. Save to add it to your library.`);
+  setSaveStatus(play.custom ? `Editing “${shownName}”. Save to update it.` : `Editing ${shownName}. Save to add it to your library.`);
   setActiveMode("compose");
 }
 
@@ -2558,6 +2638,15 @@ function bindEvents() {
   }
   if (pfDelete) {
     pfDelete.addEventListener("click", deleteFullscreenPlay);
+  }
+  if (pfNameInput) {
+    pfNameInput.addEventListener("blur", commitFullscreenRename);
+    pfNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        pfNameInput.blur();
+      }
+    });
   }
   if (pfAddPlaybook) {
     pfAddPlaybook.addEventListener("change", handleAddToPlaybookChange);
