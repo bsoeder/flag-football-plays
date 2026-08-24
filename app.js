@@ -343,6 +343,9 @@ const subviewPanels = Array.from(document.querySelectorAll("[data-subview-panel]
 const newPlaybookName = document.querySelector("#new-playbook-name");
 const createPlaybookButton = document.querySelector("#create-playbook-button");
 const playbooksList = document.querySelector("#playbooks-list");
+const exportDataButton = document.querySelector("#export-data-button");
+const importDataInput = document.querySelector("#import-data-input");
+const syncStatus = document.querySelector("#sync-status");
 const playFullscreen = document.querySelector("#play-fullscreen");
 const pfNameInput = document.querySelector("#pf-name-input");
 const pfCode = document.querySelector("#pf-code");
@@ -784,8 +787,22 @@ function loadJson(key) {
   }
 }
 
+function normalizeCustomPlay(play) {
+  return { ...normalizeSnapshot(play), id: play.id, name: play.name, type: play.type, custom: true };
+}
+
+function normalizePlaybook(book) {
+  return {
+    id: book.id || createId("book"),
+    name: book.name,
+    playIds: Array.isArray(book.playIds) ? book.playIds.filter((id) => typeof id === "string") : [],
+  };
+}
+
 function loadCustomPlays() {
-  return loadJson(customPlaysKey).map((play) => ({ ...normalizeSnapshot(play), id: play.id, name: play.name, type: play.type, custom: true }));
+  return loadJson(customPlaysKey)
+    .filter((play) => play && play.id && play.name)
+    .map(normalizeCustomPlay);
 }
 
 function persistCustomPlays() {
@@ -795,15 +812,122 @@ function persistCustomPlays() {
 function loadPlaybooks() {
   return loadJson(playbooksKey)
     .filter((book) => book && typeof book.name === "string")
-    .map((book) => ({
-      id: book.id || createId("book"),
-      name: book.name,
-      playIds: Array.isArray(book.playIds) ? book.playIds.filter((id) => typeof id === "string") : [],
-    }));
+    .map(normalizePlaybook);
 }
 
 function persistPlaybooks() {
   window.localStorage.setItem(playbooksKey, JSON.stringify(playbooks));
+}
+
+// A snapshot of everything worth syncing, for the shared repo file / export.
+function currentDataBundle() {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    plays: customPlays,
+    playbooks,
+    nameOverrides,
+  };
+}
+
+// Merge a data bundle in without clobbering local edits: add plays/playbooks the
+// device doesn't already have (matched by id), and fill in any missing rename.
+function mergeDataBundle(bundle) {
+  if (!bundle || typeof bundle !== "object") {
+    return { plays: 0, playbooks: 0 };
+  }
+
+  let addedPlays = 0;
+  const knownPlayIds = new Set(customPlays.map((play) => play.id));
+  (Array.isArray(bundle.plays) ? bundle.plays : [])
+    .filter((play) => play && play.id && play.name && !knownPlayIds.has(play.id))
+    .forEach((play) => {
+      customPlays.push(normalizeCustomPlay(play));
+      knownPlayIds.add(play.id);
+      addedPlays += 1;
+    });
+
+  let addedBooks = 0;
+  const knownBookIds = new Set(playbooks.map((book) => book.id));
+  (Array.isArray(bundle.playbooks) ? bundle.playbooks : [])
+    .filter((book) => book && book.id && typeof book.name === "string" && !knownBookIds.has(book.id))
+    .forEach((book) => {
+      playbooks.push(normalizePlaybook(book));
+      knownBookIds.add(book.id);
+      addedBooks += 1;
+    });
+
+  let changedNames = false;
+  if (bundle.nameOverrides && typeof bundle.nameOverrides === "object") {
+    Object.entries(bundle.nameOverrides).forEach(([id, name]) => {
+      if (!(id in nameOverrides) && typeof name === "string") {
+        nameOverrides[id] = name;
+        changedNames = true;
+      }
+    });
+  }
+
+  if (addedPlays) {
+    persistCustomPlays();
+  }
+  if (addedBooks) {
+    persistPlaybooks();
+  }
+  if (changedNames) {
+    persistNameOverrides();
+  }
+  return { plays: addedPlays, playbooks: addedBooks };
+}
+
+// Load the shared library file committed to the repo, so a fresh device picks up
+// the team's saved plays and playbooks. Local edits always win (merge is additive).
+async function loadSharedLibrary() {
+  try {
+    const response = await fetch("./playbook-data.json", { cache: "no-store" });
+    if (!response.ok) {
+      return;
+    }
+    const bundle = await response.json();
+    const added = mergeDataBundle(bundle);
+    if (added.plays || added.playbooks) {
+      renderPlaybookLibrary();
+      renderPlaybooks();
+    }
+  } catch {
+    // No shared file (or offline) — the app still works with local data.
+  }
+}
+
+function exportDataFile() {
+  const bundle = currentDataBundle();
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+  downloadBlob(blob, "playbook-data.json");
+  setSyncStatus(`Exported ${bundle.plays.length} play${bundle.plays.length === 1 ? "" : "s"} and ${bundle.playbooks.length} playbook${bundle.playbooks.length === 1 ? "" : "s"}. Commit playbook-data.json to sync all devices.`);
+}
+
+function importDataFile(file) {
+  if (!file) {
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const bundle = JSON.parse(String(reader.result));
+      const added = mergeDataBundle(bundle);
+      renderPlaybookLibrary();
+      renderPlaybooks();
+      setSyncStatus(`Imported ${added.plays} new play${added.plays === 1 ? "" : "s"} and ${added.playbooks} new playbook${added.playbooks === 1 ? "" : "s"}.`);
+    } catch {
+      setSyncStatus("That file could not be read as playbook data.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setSyncStatus(message) {
+  if (syncStatus) {
+    syncStatus.textContent = message;
+  }
 }
 
 function setSimulationStatus(message) {
@@ -2655,6 +2779,16 @@ function bindEvents() {
     }
   }
 
+  if (exportDataButton) {
+    exportDataButton.addEventListener("click", exportDataFile);
+  }
+  if (importDataInput) {
+    importDataInput.addEventListener("change", () => {
+      importDataFile(importDataInput.files && importDataInput.files[0]);
+      importDataInput.value = "";
+    });
+  }
+
   if (pfClose) {
     pfClose.addEventListener("click", closePlayFullscreen);
   }
@@ -3353,3 +3487,4 @@ renderPlaybooks();
 renderPlaybookSubview();
 registerAppShell();
 render();
+loadSharedLibrary();

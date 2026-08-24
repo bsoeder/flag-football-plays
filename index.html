@@ -260,6 +260,17 @@
               <button id="create-playbook-button" type="button">Create Playbook</button>
             </div>
           </div>
+          <div class="playbook-sync">
+            <div class="playbook-sync-actions">
+              <button id="export-data-button" class="secondary-button" type="button">Export file</button>
+              <label class="secondary-button import-data-label">
+                Import file
+                <input id="import-data-input" type="file" accept="application/json,.json" hidden>
+              </label>
+            </div>
+            <p class="field-help">Playbooks save on this device automatically. To sync across devices, tap <strong>Export file</strong>, commit <code>playbook-data.json</code> to the repo (or <strong>Import file</strong> it on another device). The app loads that shared file on every device.</p>
+            <div id="sync-status" class="sync-status" aria-live="polite"></div>
+          </div>
           <div id="playbooks-list" class="playbooks-list"></div>
         </div>
       </section>
