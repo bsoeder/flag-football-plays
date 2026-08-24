@@ -1,3 +1,6 @@
+// App version — shown in the header. Bump alongside the service worker cache.
+const APP_VERSION = "v1.12";
+
 const routeTree = {
   0: "Step-forward screen",
   1: "Out",
@@ -400,6 +403,7 @@ const svgNs = "http://www.w3.org/2000/svg";
 const customPlaysKey = "flag-football-custom-plays";
 const playbooksKey = "flag-football-playbooks";
 const nameOverridesKey = "flag-football-name-overrides";
+const playOverridesKey = "flag-football-play-overrides";
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -408,8 +412,10 @@ let proMotion = "stay";
 let customPlays = loadCustomPlays();
 let playbooks = loadPlaybooks();
 let nameOverrides = loadNameOverrides();
+let playOverrides = loadPlayOverrides();
 let playbookSubview = "plays";
 let openPickerBookId = null;
+let editingPlayId = null;
 let routeOverrides = {};
 let alignmentOverrides = {};
 let simulationFrameId = 0;
@@ -854,6 +860,7 @@ function currentDataBundle() {
     plays: customPlays,
     playbooks,
     nameOverrides,
+    overrides: playOverrides,
   };
 }
 
@@ -894,6 +901,16 @@ function mergeDataBundle(bundle) {
     });
   }
 
+  let changedOverrides = false;
+  if (bundle.overrides && typeof bundle.overrides === "object") {
+    Object.entries(bundle.overrides).forEach(([id, play]) => {
+      if (!(id in playOverrides) && play && typeof play === "object") {
+        playOverrides[id] = play;
+        changedOverrides = true;
+      }
+    });
+  }
+
   if (addedPlays) {
     persistCustomPlays();
   }
@@ -902,6 +919,9 @@ function mergeDataBundle(bundle) {
   }
   if (changedNames) {
     persistNameOverrides();
+  }
+  if (changedOverrides) {
+    persistPlayOverrides();
   }
   return { plays: addedPlays, playbooks: addedBooks };
 }
@@ -961,7 +981,7 @@ function setSyncStatus(message) {
 // Stores the bundle as three rows (Key = plays | playbooks | nameOverrides,
 // Data = JSON) in an Airtable table, so plays/playbooks sync across devices.
 const airtableConfigKey = "flag-football-airtable";
-const airtableKeys = ["plays", "playbooks", "nameOverrides"];
+const airtableKeys = ["plays", "playbooks", "nameOverrides", "overrides"];
 let airtableConfig = loadAirtableConfig();
 let airtablePushTimer = null;
 let airtableBusy = false;
@@ -1045,11 +1065,12 @@ async function airtablePush() {
   await airtableUpsert(records, "plays", JSON.stringify(bundle.plays));
   await airtableUpsert(records, "playbooks", JSON.stringify(bundle.playbooks));
   await airtableUpsert(records, "nameOverrides", JSON.stringify(bundle.nameOverrides));
+  await airtableUpsert(records, "overrides", JSON.stringify(bundle.overrides));
 }
 
 async function airtablePullBundle() {
   const records = await airtableGetRecords();
-  const bundle = { plays: [], playbooks: [], nameOverrides: {} };
+  const bundle = { plays: [], playbooks: [], nameOverrides: {}, overrides: {} };
   records.forEach((record) => {
     if (!airtableKeys.includes(record.key) || typeof record.data !== "string") {
       return;
@@ -1084,9 +1105,15 @@ function applyCloudBundle(bundle) {
     nameOverrides = { ...nameOverrides, ...bundle.nameOverrides };
   }
 
+  // Cloud edits to built-in plays win for shared ids; keep any local-only edits.
+  if (bundle.overrides && typeof bundle.overrides === "object") {
+    playOverrides = { ...playOverrides, ...bundle.overrides };
+  }
+
   persistCustomPlays();
   persistPlaybooks();
   persistNameOverrides();
+  persistPlayOverrides();
 }
 
 // Pull (cloud wins for shared items, so edits propagate) then push local-only items up.
@@ -1148,9 +1175,11 @@ async function airtablePullReplace() {
       .filter((book) => book && book.id && typeof book.name === "string")
       .map(normalizePlaybook);
     nameOverrides = bundle.nameOverrides && typeof bundle.nameOverrides === "object" ? bundle.nameOverrides : {};
+    playOverrides = bundle.overrides && typeof bundle.overrides === "object" ? bundle.overrides : {};
     persistCustomPlays();
     persistPlaybooks();
     persistNameOverrides();
+    persistPlayOverrides();
     renderPlaybookLibrary();
     renderPlaybooks();
     setSyncStatus(`Replaced local data with the cloud copy (${customPlays.length} play(s), ${playbooks.length} playbook(s)).`);
@@ -1266,9 +1295,29 @@ function persistNameOverrides() {
   scheduleAirtablePush();
 }
 
-// Every play the app knows about: the built-in install plus the user's saved plays.
+function loadPlayOverrides() {
+  try {
+    const raw = window.localStorage.getItem(playOverridesKey);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistPlayOverrides() {
+  window.localStorage.setItem(playOverridesKey, JSON.stringify(playOverrides));
+  scheduleAirtablePush();
+}
+
+// Every play the app knows about: the built-in install (with any edits applied in place)
+// plus the user's saved plays.
 function allPlays() {
-  return playLibrary.concat(customPlays);
+  const base = playLibrary.map((play) => {
+    const override = playOverrides[play.id];
+    return override ? { ...override, id: play.id, custom: false, overridden: true } : play;
+  });
+  return base.concat(customPlays);
 }
 
 function findAnyPlay(id) {
@@ -1314,15 +1363,40 @@ function saveCurrentPlay() {
 
   const type = savePlayType && playTypeLibrary[savePlayType.value] ? savePlayType.value : "pass";
   const snapshot = normalizeSnapshot(currentPlaySnapshot());
-  const existing = customPlays.find((play) => play.name.toLowerCase() === name.toLowerCase());
-  const play = { ...snapshot, name, type, custom: true, id: existing ? existing.id : createId("custom") };
+  const editing = editingPlayId ? findAnyPlay(editingPlayId) : null;
 
-  if (existing) {
-    customPlays = customPlays.map((entry) => (entry.id === existing.id ? play : entry));
-    setSaveStatus(`Updated “${name}” in your library.`);
+  if (editing && editing.custom) {
+    // Editing a saved play: update it in place by id (so renames and playbook
+    // references stay intact, and edits show everywhere the play appears).
+    const updated = { ...snapshot, name, type, custom: true, id: editing.id };
+    customPlays = customPlays.map((entry) => (entry.id === editing.id ? updated : entry));
+    if (nameOverrides[editing.id]) {
+      delete nameOverrides[editing.id];
+      persistNameOverrides();
+    }
+    editingPlayId = editing.id;
+    setSaveStatus(`Updated “${name}”.`);
+  } else if (editing && !editing.custom) {
+    // Editing a built-in play: overwrite it in place with an override keyed by its id,
+    // so the edit shows everywhere (library + playbooks) with no duplicate.
+    playOverrides = { ...playOverrides, [editing.id]: { ...snapshot, name, type, id: editing.id } };
+    persistPlayOverrides();
+    editingPlayId = editing.id;
+    setSaveStatus(`Updated “${name}”.`);
   } else {
-    customPlays = [play, ...customPlays];
-    setSaveStatus(`Saved “${name}” to your library.`);
+    // Fresh play (not opened for editing): upsert by name.
+    const existing = customPlays.find((play) => play.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      const updated = { ...snapshot, name, type, custom: true, id: existing.id };
+      customPlays = customPlays.map((entry) => (entry.id === existing.id ? updated : entry));
+      editingPlayId = existing.id;
+      setSaveStatus(`Updated “${name}” in your library.`);
+    } else {
+      const created = { ...snapshot, name, type, custom: true, id: createId("custom") };
+      customPlays = [created, ...customPlays];
+      editingPlayId = created.id;
+      setSaveStatus(`Saved “${name}” to your library.`);
+    }
   }
 
   persistCustomPlays();
@@ -1604,7 +1678,11 @@ function createPlaybookCard(play, groupKey) {
     ? `<span class="playbook-badge" data-badge="formation">${escapeHtml(formationLibrary[play.formation].label)}</span>`
     : `<span class="playbook-badge" data-badge="type">${escapeHtml(playTypeLibrary[play.type].label)}</span>`;
 
-  const savedBadge = play.custom ? '<span class="playbook-badge" data-badge="saved">Saved</span>' : "";
+  const savedBadge = play.custom
+    ? '<span class="playbook-badge" data-badge="saved">Saved</span>'
+    : play.overridden
+      ? '<span class="playbook-badge" data-badge="edited">Edited</span>'
+      : "";
 
   const body = document.createElement("div");
   body.className = "playbook-card-body";
@@ -1702,7 +1780,10 @@ function openPlayFullscreen(play) {
   renderField(pfField, snapshot);
 
   if (pfDelete) {
-    pfDelete.classList.toggle("is-hidden", !play.custom);
+    // Custom plays can be deleted; edited built-ins can be reset to the original.
+    const canDelete = play.custom || play.overridden;
+    pfDelete.classList.toggle("is-hidden", !canDelete);
+    pfDelete.textContent = play.overridden && !play.custom ? "Reset to original" : "Delete";
   }
   refreshFullscreenPlaybookOptions();
 
@@ -1755,13 +1836,28 @@ function handleAddToPlaybookChange() {
   pfAddPlaybook.value = "";
 }
 
+function resetPlayOverride(id) {
+  if (playOverrides[id]) {
+    delete playOverrides[id];
+    persistPlayOverrides();
+  }
+  renderPlaybookLibrary();
+  renderPlaybooks();
+}
+
 function deleteFullscreenPlay() {
-  if (!fullscreenPlay || !fullscreenPlay.custom) {
+  if (!fullscreenPlay) {
     return;
   }
   const id = fullscreenPlay.id;
-  closePlayFullscreen();
-  deleteCustomPlay(id);
+  if (fullscreenPlay.custom) {
+    closePlayFullscreen();
+    deleteCustomPlay(id);
+  } else if (fullscreenPlay.overridden) {
+    // Built-in with a saved edit: revert to the original install play.
+    closePlayFullscreen();
+    resetPlayOverride(id);
+  }
 }
 
 function commitFullscreenRename() {
@@ -1801,6 +1897,9 @@ function editFullscreenPlay() {
   const play = fullscreenPlay;
   closePlayFullscreen();
   applySnapshot(play);
+  // Remember which play we're editing so Save updates it in place (and repoints
+  // playbooks for a built-in) instead of creating an unrelated copy.
+  editingPlayId = play.id;
   // Prefill the save form so editing an existing play saves back over it.
   const shownName = displayName(play);
   if (savePlayName) {
@@ -3029,6 +3128,7 @@ function bindEvents() {
     stopSimulationSilently();
     clearRouteOverrides();
     clearAlignmentOverrides();
+    editingPlayId = null;
     const code = Array.from({ length: 4 }, () => Math.floor(Math.random() * 10)).join("");
     setPlayCode(code);
   });
@@ -3059,6 +3159,7 @@ function bindEvents() {
       stopSimulationSilently();
       clearRouteOverrides();
       clearAlignmentOverrides();
+      editingPlayId = null;
       setPlayCode(button.dataset.code);
     });
   });
@@ -3835,6 +3936,10 @@ applyConcepts({});
 renderPlaybookLibrary();
 renderPlaybooks();
 renderPlaybookSubview();
+const appVersionEl = document.querySelector("#app-version");
+if (appVersionEl) {
+  appVersionEl.textContent = APP_VERSION;
+}
 registerAppShell();
 render();
 renderAirtableConfig();

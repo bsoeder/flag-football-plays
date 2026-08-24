@@ -1374,3 +1374,23 @@ body.is-fullscreen-open {
 .cloud-sync-body {
   padding: 0 16px 16px;
 }
+
+/* Version badge in the header */
+.app-version {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(19, 42, 30, 0.1);
+  color: var(--muted);
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.playbook-badge[data-badge="edited"] {
+  background: rgba(199, 79, 45, 0.16);
+  color: var(--accent-strong);
+}
