@@ -25,6 +25,22 @@ const routeShortNames = {
   9: "Go",
 };
 
+// A player's "route" can be a run (R) instead of a pass route, matching the team's
+// code convention (e.g. 56R9 = z runs). Runs draw as a green ball-carrier path.
+const runRouteValue = "R";
+
+function isRunRoute(codeChar) {
+  return String(codeChar).toUpperCase() === runRouteValue;
+}
+
+function routeLabel(codeChar) {
+  return isRunRoute(codeChar) ? "Run" : routeTree[Number(codeChar)] || "Route";
+}
+
+function routeTagText(codeChar) {
+  return isRunRoute(codeChar) ? "Run" : `${codeChar} ${routeShortNames[Number(codeChar)] || ""}`.trim();
+}
+
 const conceptLibrary = {
   run: {
     none: {
@@ -1510,10 +1526,12 @@ function editFullscreenPlay() {
 }
 
 function buildRouteOptions() {
+  const routeOptions = Object.entries(routeTree)
+    .map(([value, label]) => `<option value="${value}">${value} - ${label}</option>`)
+    .join("");
+  const runOption = `<option value="${runRouteValue}">${runRouteValue} - Run</option>`;
   Object.entries(routeInputs).forEach(([, select]) => {
-    select.innerHTML = Object.entries(routeTree)
-      .map(([value, label]) => `<option value="${value}">${value} - ${label}</option>`)
-      .join("");
+    select.innerHTML = routeOptions + runOption;
   });
 }
 
@@ -1527,6 +1545,7 @@ function buildConceptOptions() {
 
 function buildLegend() {
   const routeCards = Object.entries(routeTree)
+    .concat([[runRouteValue, "Run (ball carrier)"]])
     .map(
       ([value, label]) => `
         <article class="legend-card">
@@ -1577,8 +1596,8 @@ function buildLegend() {
 }
 
 function sanitizeCode(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  return digits.padEnd(4, "0");
+  const chars = String(value).toUpperCase().replace(/[^0-9R]/g, "").slice(0, 4);
+  return chars.padEnd(4, "0");
 }
 
 function getPlayCode() {
@@ -1733,6 +1752,11 @@ function routePoints(routeNumber, start) {
   const wide = 160;
   const towardMiddle = x < 500 ? 1 : -1;
   const towardSideline = towardMiddle * -1;
+
+  // Run: a downhill ball-carrier path forward with a slight cut toward the middle.
+  if (isRunRoute(routeNumber)) {
+    return [[x, y], [x, y - 55], [x + 32 * towardMiddle, y - 165]];
+  }
 
   switch (Number(routeNumber)) {
     case 0:
@@ -1892,6 +1916,19 @@ function drawRoutes(target, snapshot) {
 
   routePlayers.forEach((player) => {
     const points = getRoutePoints(snapshot, player);
+
+    if (isRunRoute(routeCodeForPlayer(snapshot, player))) {
+      // Handoff / pitch line from the QB to the ball carrier, then the run path in green.
+      drawStyledPath(target, [[alignment.q.x, alignment.q.y], [points[0][0], points[0][1]]], {
+        stroke: "rgba(255,255,255,0.75)",
+        width: 3,
+        dasharray: "10 8",
+      });
+      drawStyledPath(target, points, { stroke: conceptColors.run, width: 12, opacity: 0.18 });
+      drawStyledPath(target, points, { stroke: conceptColors.run, width: 7, marker: "arrowhead-run" });
+      return;
+    }
+
     target.appendChild(
       createSvgElement("path", {
         d: buildPath(points),
@@ -2230,7 +2267,7 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
       fill: "#fff7eb",
       "pointer-events": "none",
     });
-    tag.textContent = player === "q" ? "snap / drop" : `${routeMap[player]} ${routeShortNames[routeMap[player]]}`;
+    tag.textContent = player === "q" ? "snap / drop" : routeTagText(routeMap[player]);
     target.appendChild(tag);
   });
 }
@@ -2386,12 +2423,12 @@ function simulateDefense(snapshot, defense) {
 
   const ranked = routePlayers
     .map((player, index) => {
-      const route = Number(snapshot.code[index]);
+      const routeChar = snapshot.code[index];
       const base = bestByPlayer[player].distance;
-      const bonus = schemeBonuses[defense][route] || 0;
+      const bonus = schemeBonuses[defense][Number(routeChar)] || 0;
       return {
         player,
-        route,
+        routeChar,
         distance: base,
         score: Math.round(base * 0.65 + bonus),
       };
@@ -2413,9 +2450,9 @@ function simulateDefense(snapshot, defense) {
     label: defenseLabels[defense],
     score: totalScore,
     bestPlayer: best.player,
-    bestRoute: routeTree[best.route],
+    bestRoute: routeLabel(best.routeChar),
     weakestPlayer: worst.player,
-    summary: `${best.player.toUpperCase()} on the ${routeTree[best.route].toLowerCase()} gives the cleanest window. ${conceptText}.`,
+    summary: `${best.player.toUpperCase()} on the ${routeLabel(best.routeChar).toLowerCase()} gives the cleanest window. ${conceptText}.`,
     detail: `${defenseDescriptions[defense]} The tightest problem is ${worst.player.toUpperCase()}, where leverage closes fastest. Concept boost: +${conceptBonus}.`,
   };
 }
