@@ -369,6 +369,8 @@ const airtableConnectButton = document.querySelector("#airtable-connect");
 const airtableSyncButton = document.querySelector("#airtable-sync");
 const airtablePullButton = document.querySelector("#airtable-pull");
 const airtableDisconnectButton = document.querySelector("#airtable-disconnect");
+const cloudSyncDetails = document.querySelector("#cloud-sync-details");
+const cloudSyncBadge = document.querySelector("#cloud-sync-badge");
 const playFullscreen = document.querySelector("#play-fullscreen");
 const pfNameInput = document.querySelector("#pf-name-input");
 const pfCode = document.querySelector("#pf-code");
@@ -1061,7 +1063,33 @@ async function airtablePullBundle() {
   return bundle;
 }
 
-// Pull + additive merge + push: adds propagate both ways and nothing is lost.
+// Apply the cloud copy so EDITS propagate, not just new items: for a play/playbook
+// present in both, the cloud version wins (that's the latest push); local-only items
+// (not yet uploaded) are kept so nothing unsynced is lost.
+function applyCloudBundle(bundle) {
+  const cloudPlays = (Array.isArray(bundle.plays) ? bundle.plays : [])
+    .filter((play) => play && play.id && play.name)
+    .map(normalizeCustomPlay);
+  const cloudPlayIds = new Set(cloudPlays.map((play) => play.id));
+  customPlays = cloudPlays.concat(customPlays.filter((play) => !cloudPlayIds.has(play.id)));
+
+  const cloudBooks = (Array.isArray(bundle.playbooks) ? bundle.playbooks : [])
+    .filter((book) => book && book.id && typeof book.name === "string")
+    .map(normalizePlaybook);
+  const cloudBookIds = new Set(cloudBooks.map((book) => book.id));
+  playbooks = cloudBooks.concat(playbooks.filter((book) => !cloudBookIds.has(book.id)));
+
+  // Cloud renames win for shared ids; keep any local-only renames.
+  if (bundle.nameOverrides && typeof bundle.nameOverrides === "object") {
+    nameOverrides = { ...nameOverrides, ...bundle.nameOverrides };
+  }
+
+  persistCustomPlays();
+  persistPlaybooks();
+  persistNameOverrides();
+}
+
+// Pull (cloud wins for shared items, so edits propagate) then push local-only items up.
 async function airtableSyncNow(reason = "") {
   if (!airtableConnected() || airtableBusy) {
     return;
@@ -1070,15 +1098,35 @@ async function airtableSyncNow(reason = "") {
   setSyncStatus(reason ? `Syncing (${reason})…` : "Syncing…");
   try {
     const bundle = await airtablePullBundle();
-    const added = mergeDataBundle(bundle);
+    applyCloudBundle(bundle);
     renderPlaybookLibrary();
     renderPlaybooks();
     await airtablePush();
     const stamp = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    const addNote = added.plays || added.playbooks ? ` Pulled ${added.plays} play(s), ${added.playbooks} playbook(s).` : "";
-    setSyncStatus(`Cloud sync on. Last synced ${stamp}.${addNote}`);
+    setSyncStatus(`Cloud sync on. Last synced ${stamp}.`);
   } catch (error) {
     setSyncStatus(`Airtable sync failed: ${error.message}. Check the token, base ID, and table.`);
+  } finally {
+    airtableBusy = false;
+  }
+}
+
+// Lightweight background pull (no push) — used on focus and on a timer so an
+// already-open device picks up edits made elsewhere.
+async function airtablePullOnly() {
+  if (!airtableConnected() || airtableBusy) {
+    return;
+  }
+  airtableBusy = true;
+  try {
+    const bundle = await airtablePullBundle();
+    applyCloudBundle(bundle);
+    renderPlaybookLibrary();
+    renderPlaybooks();
+    const stamp = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    setSyncStatus(`Cloud sync on. Checked ${stamp}.`);
+  } catch {
+    // Leave the last status; a transient check failure isn't worth alarming about.
   } finally {
     airtableBusy = false;
   }
@@ -1153,6 +1201,14 @@ function renderAirtableConfig() {
   }
   if (airtablePullButton) {
     airtablePullButton.classList.toggle("is-hidden", !on);
+  }
+  if (cloudSyncBadge) {
+    cloudSyncBadge.textContent = on ? "On" : "Off";
+    cloudSyncBadge.dataset.state = on ? "on" : "off";
+  }
+  // Auto-collapse the panel once connected (setup is done); open it for setup.
+  if (cloudSyncDetails) {
+    cloudSyncDetails.open = !on;
   }
 }
 
@@ -3070,6 +3126,18 @@ function bindEvents() {
   if (airtableDisconnectButton) {
     airtableDisconnectButton.addEventListener("click", disconnectAirtable);
   }
+
+  // Pick up edits from other devices: when the app regains focus, and on a light timer.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      airtablePullOnly();
+    }
+  });
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") {
+      airtablePullOnly();
+    }
+  }, 60000);
 
   if (pfClose) {
     pfClose.addEventListener("click", closePlayFullscreen);

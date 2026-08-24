@@ -1312,3 +1312,65 @@ body.is-fullscreen-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* Collapsible cloud-sync panel */
+.cloud-sync-details {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(19, 42, 30, 0.04);
+  overflow: hidden;
+}
+
+.cloud-sync-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+}
+
+.cloud-sync-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cloud-sync-title {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 1.05rem;
+}
+
+.cloud-sync-title::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--muted);
+}
+
+.cloud-sync-details[open] .cloud-sync-title::before {
+  content: "▾";
+}
+
+.cloud-sync-badge {
+  flex: none;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cloud-sync-badge[data-state="on"] {
+  background: rgba(33, 68, 50, 0.16);
+  color: #214432;
+}
+
+.cloud-sync-badge[data-state="off"] {
+  background: rgba(19, 42, 30, 0.1);
+  color: var(--muted);
+}
+
+.cloud-sync-body {
+  padding: 0 16px 16px;
+}

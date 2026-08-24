@@ -261,32 +261,39 @@
             </div>
           </div>
           <div class="playbook-sync">
-            <h3 class="sync-heading">Cloud sync (Airtable)</h3>
-            <p class="field-help">Sync your saved plays and playbooks across devices automatically. In Airtable, make a base with a table (default name <code>PlayStudio</code>) that has a <strong>Key</strong> field and a <strong>Data</strong> long-text field, then create a personal access token with <em>data.records:read</em> and <em>data.records:write</em> on that base.</p>
-            <label class="field-label" for="airtable-token">Airtable token</label>
-            <input id="airtable-token" type="password" autocomplete="off" placeholder="pat…">
-            <div class="cloud-grid">
-              <label><span>Base ID</span><input id="airtable-base" type="text" autocomplete="off" placeholder="app…"></label>
-              <label><span>Table name</span><input id="airtable-table" type="text" autocomplete="off" placeholder="PlayStudio" value="PlayStudio"></label>
-            </div>
-            <div class="playbook-sync-actions">
-              <button id="airtable-connect" type="button">Connect &amp; Sync</button>
-              <button id="airtable-sync" class="secondary-button is-hidden" type="button">Sync now</button>
-              <button id="airtable-pull" class="secondary-button is-hidden" type="button">Replace from cloud</button>
-              <button id="airtable-disconnect" class="secondary-button is-hidden" type="button">Disconnect</button>
-            </div>
-            <div id="sync-status" class="sync-status" aria-live="polite"></div>
+            <details id="cloud-sync-details" class="cloud-sync-details">
+              <summary class="cloud-sync-summary">
+                <span class="cloud-sync-title">Cloud sync (Airtable)</span>
+                <span id="cloud-sync-badge" class="cloud-sync-badge" data-state="off">Off</span>
+              </summary>
+              <div class="cloud-sync-body">
+                <p class="field-help">Sync your saved plays and playbooks across devices automatically. In Airtable, make a base with a table (default name <code>PlayStudio</code>) that has a <strong>Key</strong> field and a <strong>Data</strong> long-text field, then create a personal access token with <em>data.records:read</em> and <em>data.records:write</em> on that base.</p>
+                <label class="field-label" for="airtable-token">Airtable token</label>
+                <input id="airtable-token" type="password" autocomplete="off" placeholder="pat…">
+                <div class="cloud-grid">
+                  <label><span>Base ID</span><input id="airtable-base" type="text" autocomplete="off" placeholder="app…"></label>
+                  <label><span>Table name</span><input id="airtable-table" type="text" autocomplete="off" placeholder="PlayStudio" value="PlayStudio"></label>
+                </div>
+                <div class="playbook-sync-actions">
+                  <button id="airtable-connect" type="button">Connect &amp; Sync</button>
+                  <button id="airtable-sync" class="secondary-button is-hidden" type="button">Sync now</button>
+                  <button id="airtable-pull" class="secondary-button is-hidden" type="button">Replace from cloud</button>
+                  <button id="airtable-disconnect" class="secondary-button is-hidden" type="button">Disconnect</button>
+                </div>
+                <div id="sync-status" class="sync-status" aria-live="polite"></div>
 
-            <details class="sync-file">
-              <summary>Or sync with a file instead</summary>
-              <div class="playbook-sync-actions">
-                <button id="export-data-button" class="secondary-button" type="button">Export file</button>
-                <label class="secondary-button import-data-label">
-                  Import file
-                  <input id="import-data-input" type="file" accept="application/json,.json" hidden>
-                </label>
+                <details class="sync-file">
+                  <summary>Or sync with a file instead</summary>
+                  <div class="playbook-sync-actions">
+                    <button id="export-data-button" class="secondary-button" type="button">Export file</button>
+                    <label class="secondary-button import-data-label">
+                      Import file
+                      <input id="import-data-input" type="file" accept="application/json,.json" hidden>
+                    </label>
+                  </div>
+                  <p class="field-help">Export downloads <code>playbook-data.json</code>; commit it to the repo (or Import it on another device) to sync without Airtable.</p>
+                </details>
               </div>
-              <p class="field-help">Export downloads <code>playbook-data.json</code>; commit it to the repo (or Import it on another device) to sync without Airtable.</p>
             </details>
           </div>
           <div id="playbooks-list" class="playbooks-list"></div>
