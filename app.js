@@ -362,6 +362,13 @@ const playbooksList = document.querySelector("#playbooks-list");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataInput = document.querySelector("#import-data-input");
 const syncStatus = document.querySelector("#sync-status");
+const airtableTokenInput = document.querySelector("#airtable-token");
+const airtableBaseInput = document.querySelector("#airtable-base");
+const airtableTableInput = document.querySelector("#airtable-table");
+const airtableConnectButton = document.querySelector("#airtable-connect");
+const airtableSyncButton = document.querySelector("#airtable-sync");
+const airtablePullButton = document.querySelector("#airtable-pull");
+const airtableDisconnectButton = document.querySelector("#airtable-disconnect");
 const playFullscreen = document.querySelector("#play-fullscreen");
 const pfNameInput = document.querySelector("#pf-name-input");
 const pfCode = document.querySelector("#pf-code");
@@ -823,6 +830,7 @@ function loadCustomPlays() {
 
 function persistCustomPlays() {
   window.localStorage.setItem(customPlaysKey, JSON.stringify(customPlays));
+  scheduleAirtablePush();
 }
 
 function loadPlaybooks() {
@@ -833,6 +841,7 @@ function loadPlaybooks() {
 
 function persistPlaybooks() {
   window.localStorage.setItem(playbooksKey, JSON.stringify(playbooks));
+  scheduleAirtablePush();
 }
 
 // A snapshot of everything worth syncing, for the shared repo file / export.
@@ -946,6 +955,228 @@ function setSyncStatus(message) {
   }
 }
 
+// ---- Airtable cloud sync -------------------------------------------------
+// Stores the bundle as three rows (Key = plays | playbooks | nameOverrides,
+// Data = JSON) in an Airtable table, so plays/playbooks sync across devices.
+const airtableConfigKey = "flag-football-airtable";
+const airtableKeys = ["plays", "playbooks", "nameOverrides"];
+let airtableConfig = loadAirtableConfig();
+let airtablePushTimer = null;
+let airtableBusy = false;
+
+function loadAirtableConfig() {
+  try {
+    const raw = window.localStorage.getItem(airtableConfigKey);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && parsed.token && parsed.baseId) {
+      return { token: parsed.token, baseId: parsed.baseId, table: parsed.table || "PlayStudio" };
+    }
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
+function persistAirtableConfig() {
+  if (airtableConfig) {
+    window.localStorage.setItem(airtableConfigKey, JSON.stringify(airtableConfig));
+  } else {
+    window.localStorage.removeItem(airtableConfigKey);
+  }
+}
+
+function airtableConnected() {
+  return Boolean(airtableConfig && airtableConfig.token && airtableConfig.baseId);
+}
+
+function airtableUrl(suffix = "") {
+  const table = encodeURIComponent(airtableConfig.table || "PlayStudio");
+  return `https://api.airtable.com/v0/${encodeURIComponent(airtableConfig.baseId)}/${table}${suffix}`;
+}
+
+async function airtableRequest(method, suffix, body) {
+  const response = await fetch(airtableUrl(suffix), {
+    method,
+    headers: {
+      Authorization: `Bearer ${airtableConfig.token}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!response.ok) {
+    let detail = `${response.status}`;
+    try {
+      const err = await response.json();
+      detail = err?.error?.message || err?.error?.type || detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+async function airtableGetRecords() {
+  const data = await airtableRequest("GET", "?pageSize=100");
+  return (data.records || []).map((record) => ({
+    id: record.id,
+    key: record.fields?.Key,
+    data: record.fields?.Data,
+  }));
+}
+
+async function airtableUpsert(records, key, dataString) {
+  const existing = records.find((record) => record.key === key);
+  if (existing) {
+    await airtableRequest("PATCH", `/${existing.id}`, { fields: { Data: dataString } });
+  } else {
+    await airtableRequest("POST", "", { records: [{ fields: { Key: key, Data: dataString } }] });
+  }
+}
+
+async function airtablePush() {
+  if (!airtableConnected()) {
+    return;
+  }
+  const records = await airtableGetRecords();
+  const bundle = currentDataBundle();
+  await airtableUpsert(records, "plays", JSON.stringify(bundle.plays));
+  await airtableUpsert(records, "playbooks", JSON.stringify(bundle.playbooks));
+  await airtableUpsert(records, "nameOverrides", JSON.stringify(bundle.nameOverrides));
+}
+
+async function airtablePullBundle() {
+  const records = await airtableGetRecords();
+  const bundle = { plays: [], playbooks: [], nameOverrides: {} };
+  records.forEach((record) => {
+    if (!airtableKeys.includes(record.key) || typeof record.data !== "string") {
+      return;
+    }
+    try {
+      bundle[record.key] = JSON.parse(record.data);
+    } catch {
+      // skip a malformed row
+    }
+  });
+  return bundle;
+}
+
+// Pull + additive merge + push: adds propagate both ways and nothing is lost.
+async function airtableSyncNow(reason = "") {
+  if (!airtableConnected() || airtableBusy) {
+    return;
+  }
+  airtableBusy = true;
+  setSyncStatus(reason ? `Syncing (${reason})…` : "Syncing…");
+  try {
+    const bundle = await airtablePullBundle();
+    const added = mergeDataBundle(bundle);
+    renderPlaybookLibrary();
+    renderPlaybooks();
+    await airtablePush();
+    const stamp = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const addNote = added.plays || added.playbooks ? ` Pulled ${added.plays} play(s), ${added.playbooks} playbook(s).` : "";
+    setSyncStatus(`Cloud sync on. Last synced ${stamp}.${addNote}`);
+  } catch (error) {
+    setSyncStatus(`Airtable sync failed: ${error.message}. Check the token, base ID, and table.`);
+  } finally {
+    airtableBusy = false;
+  }
+}
+
+// Replace local data with the cloud copy (so deletes on another device take effect).
+async function airtablePullReplace() {
+  if (!airtableConnected() || airtableBusy) {
+    return;
+  }
+  airtableBusy = true;
+  setSyncStatus("Pulling from cloud…");
+  try {
+    const bundle = await airtablePullBundle();
+    customPlays = (Array.isArray(bundle.plays) ? bundle.plays : [])
+      .filter((play) => play && play.id && play.name)
+      .map(normalizeCustomPlay);
+    playbooks = (Array.isArray(bundle.playbooks) ? bundle.playbooks : [])
+      .filter((book) => book && book.id && typeof book.name === "string")
+      .map(normalizePlaybook);
+    nameOverrides = bundle.nameOverrides && typeof bundle.nameOverrides === "object" ? bundle.nameOverrides : {};
+    persistCustomPlays();
+    persistPlaybooks();
+    persistNameOverrides();
+    renderPlaybookLibrary();
+    renderPlaybooks();
+    setSyncStatus(`Replaced local data with the cloud copy (${customPlays.length} play(s), ${playbooks.length} playbook(s)).`);
+  } catch (error) {
+    setSyncStatus(`Pull failed: ${error.message}.`);
+  } finally {
+    airtableBusy = false;
+  }
+}
+
+// Debounced background push after a local change.
+function scheduleAirtablePush() {
+  if (!airtableConnected()) {
+    return;
+  }
+  window.clearTimeout(airtablePushTimer);
+  airtablePushTimer = window.setTimeout(async () => {
+    if (airtableBusy) {
+      return;
+    }
+    airtableBusy = true;
+    setSyncStatus("Saving to cloud…");
+    try {
+      await airtablePush();
+      const stamp = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      setSyncStatus(`Cloud sync on. Saved ${stamp}.`);
+    } catch (error) {
+      setSyncStatus(`Cloud save failed: ${error.message}.`);
+    } finally {
+      airtableBusy = false;
+    }
+  }, 900);
+}
+
+function renderAirtableConfig() {
+  if (!airtableTokenInput) {
+    return;
+  }
+  airtableTokenInput.value = airtableConfig?.token || "";
+  airtableBaseInput.value = airtableConfig?.baseId || "";
+  airtableTableInput.value = airtableConfig?.table || "PlayStudio";
+  const on = airtableConnected();
+  if (airtableDisconnectButton) {
+    airtableDisconnectButton.classList.toggle("is-hidden", !on);
+  }
+  if (airtableSyncButton) {
+    airtableSyncButton.classList.toggle("is-hidden", !on);
+  }
+  if (airtablePullButton) {
+    airtablePullButton.classList.toggle("is-hidden", !on);
+  }
+}
+
+function connectAirtable() {
+  const token = (airtableTokenInput?.value || "").trim();
+  const baseId = (airtableBaseInput?.value || "").trim();
+  const table = (airtableTableInput?.value || "").trim() || "PlayStudio";
+  if (!token || !baseId) {
+    setSyncStatus("Enter your Airtable token and base ID to connect.");
+    return;
+  }
+  airtableConfig = { token, baseId, table };
+  persistAirtableConfig();
+  renderAirtableConfig();
+  airtableSyncNow("connect");
+}
+
+function disconnectAirtable() {
+  airtableConfig = null;
+  persistAirtableConfig();
+  renderAirtableConfig();
+  setSyncStatus("Cloud sync disconnected. Your data stays on this device.");
+}
+
 function setSimulationStatus(message) {
   simulationStatus.textContent = message;
 }
@@ -976,6 +1207,7 @@ function loadNameOverrides() {
 
 function persistNameOverrides() {
   window.localStorage.setItem(nameOverridesKey, JSON.stringify(nameOverrides));
+  scheduleAirtablePush();
 }
 
 // Every play the app knows about: the built-in install plus the user's saved plays.
@@ -2826,6 +3058,19 @@ function bindEvents() {
     });
   }
 
+  if (airtableConnectButton) {
+    airtableConnectButton.addEventListener("click", connectAirtable);
+  }
+  if (airtableSyncButton) {
+    airtableSyncButton.addEventListener("click", () => airtableSyncNow("manual"));
+  }
+  if (airtablePullButton) {
+    airtablePullButton.addEventListener("click", airtablePullReplace);
+  }
+  if (airtableDisconnectButton) {
+    airtableDisconnectButton.addEventListener("click", disconnectAirtable);
+  }
+
   if (pfClose) {
     pfClose.addEventListener("click", closePlayFullscreen);
   }
@@ -3524,4 +3769,8 @@ renderPlaybooks();
 renderPlaybookSubview();
 registerAppShell();
 render();
+renderAirtableConfig();
 loadSharedLibrary();
+if (airtableConnected()) {
+  airtableSyncNow("startup");
+}

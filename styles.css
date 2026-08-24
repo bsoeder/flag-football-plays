@@ -1266,3 +1266,49 @@ body.is-fullscreen-open {
   font-weight: 700;
   font-size: 0.92rem;
 }
+
+/* Airtable cloud sync UI */
+.sync-heading {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.cloud-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cloud-grid label span {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.playbook-sync-actions button.is-hidden {
+  display: none;
+}
+
+.sync-file {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.sync-file summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.sync-file .playbook-sync-actions {
+  margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .cloud-grid {
+    grid-template-columns: 1fr;
+  }
+}
