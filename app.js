@@ -11,6 +11,20 @@ const routeTree = {
   9: "Go",
 };
 
+// Compact route names for the on-field tags so labels stay readable and don't collide.
+const routeShortNames = {
+  0: "Screen",
+  1: "Out",
+  2: "Slant",
+  3: "Comeback",
+  4: "Curl",
+  5: "Deep Out",
+  6: "Cross",
+  7: "Corner",
+  8: "Post",
+  9: "Go",
+};
+
 const conceptLibrary = {
   run: {
     none: {
@@ -227,20 +241,22 @@ const conceptColors = {
   option: "#76c5ff",
 };
 
+// Alignments are centered on the field's vertical center line (x = 500); X and Y sit
+// wide toward the sidelines so the picture fills the frame and reads well on a tablet.
 const formations = {
   pro: {
-    x: { x: 220, y: 410 },
-    y: { x: 780, y: 410 },
-    z: { x: 500, y: 546 },
-    c: { x: 500, y: 410 },
-    q: { x: 500, y: 498 },
+    x: { x: 175, y: 405 },
+    y: { x: 825, y: 405 },
+    z: { x: 500, y: 545 },
+    c: { x: 500, y: 405 },
+    q: { x: 500, y: 495 },
   },
   trips: {
-    x: { x: 260, y: 410 },
-    y: { x: 340, y: 370 },
-    z: { x: 420, y: 410 },
-    c: { x: 500, y: 410 },
-    q: { x: 500, y: 500 },
+    x: { x: 175, y: 405 },
+    y: { x: 330, y: 368 },
+    z: { x: 485, y: 405 },
+    c: { x: 825, y: 405 },
+    q: { x: 560, y: 500 },
   },
 };
 
@@ -391,8 +407,8 @@ function getProBackfieldLayout(motion = proMotion) {
   const start = { ...formations.pro.z };
   const destinations = {
     stay: start,
-    left: { x: 340, y: start.y },
-    right: { x: 660, y: start.y },
+    left: { x: 300, y: start.y },
+    right: { x: 700, y: start.y },
   };
 
   return {
@@ -408,23 +424,23 @@ function getAlignment(formationKey, options = {}) {
 
   if (formationKey === "bunch") {
     const common = {
-      x: { x: 400, y: 410 },
-      y: { x: 600, y: 410 },
-      c: { x: 500, y: 410 },
-      q: { x: 500, y: 500 },
+      x: { x: 360, y: 405 },
+      y: { x: 640, y: 405 },
+      c: { x: 500, y: 405 },
+      q: { x: 500, y: 505 },
     };
 
     // Z aligns in the backfield, slightly offset from the X/Y bunch toward the called side.
     if (resolvedBunchSide === "right") {
       return {
         ...common,
-        z: { x: 560, y: 470 },
+        z: { x: 575, y: 475 },
       };
     }
 
     return {
       ...common,
-      z: { x: 440, y: 470 },
+      z: { x: 425, y: 475 },
     };
   }
 
@@ -1757,7 +1773,7 @@ function drawRoutes(target, snapshot) {
         d: buildPath(points),
         fill: "none",
         stroke: "#ffeb7a",
-        "stroke-width": 8,
+        "stroke-width": 11,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "stroke-opacity": "0.15",
@@ -1768,7 +1784,7 @@ function drawRoutes(target, snapshot) {
         d: buildPath(points),
         fill: "none",
         stroke: "#ffeb7a",
-        "stroke-width": 4,
+        "stroke-width": 6,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
         "marker-end": "url(#arrowhead-route)",
@@ -2014,10 +2030,10 @@ function drawRouteHandles(target, snapshot) {
         createSvgElement("circle", {
           cx: point[0],
           cy: point[1],
-          r: 12,
+          r: 15,
           fill: "rgba(255,247,235,0.98)",
           stroke: playerColors[player],
-          "stroke-width": 4,
+          "stroke-width": 5,
           "data-route-player": player,
           "data-route-point-index": String(index + 1),
           cursor: "grab",
@@ -2027,7 +2043,7 @@ function drawRouteHandles(target, snapshot) {
         createSvgElement("circle", {
           cx: point[0],
           cy: point[1],
-          r: 4,
+          r: 5,
           fill: playerColors[player],
           "pointer-events": "none",
         }),
@@ -2045,10 +2061,10 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
     const circleAttrs = {
       cx: position.x,
       cy: position.y,
-      r: player === "q" ? 24 : 22,
+      r: player === "q" ? 30 : 28,
       fill: playerColors[player],
       stroke: "rgba(255,255,255,0.9)",
-      "stroke-width": 4,
+      "stroke-width": 5,
     };
     if (interactive) {
       circleAttrs["data-player-move"] = player;
@@ -2058,30 +2074,39 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
 
     const label = createSvgElement("text", {
       x: position.x,
-      y: position.y + 6,
+      y: position.y + 8,
       "text-anchor": "middle",
       "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
-      "font-size": player === "q" ? "26" : "24",
-      "letter-spacing": "0.08em",
+      "font-size": player === "q" ? "34" : "32",
+      "letter-spacing": "0.06em",
       fill: "#ffffff",
       "pointer-events": "none",
     });
     label.textContent = player.toUpperCase();
     target.appendChild(label);
 
+    // Place the route tag below the player by default, but flip it above when another
+    // player sits directly beneath (the C/Q/Z stack on the center line) so labels don't collide.
+    const above = position.y - 42;
+    const below = position.y + 62;
+    let tagY = below;
+    if (player === "q") {
+      tagY = snapshot.formation === "pro" && Math.abs(alignment.z.x - alignment.q.x) < 40 ? above : below;
+    } else if (player === "c" && Math.abs(alignment.c.x - alignment.q.x) < 46) {
+      tagY = above;
+    }
+
     const tag = createSvgElement("text", {
       x: position.x,
-      y: player === "q" && snapshot.formation === "pro" && Math.abs(alignment.z.x - alignment.q.x) < 40
-        ? position.y - 34
-        : position.y + 52,
+      y: tagY,
       "text-anchor": "middle",
       "font-family": "Avenir Next, Trebuchet MS, sans-serif",
-      "font-size": "18",
+      "font-size": "24",
       "font-weight": "700",
       fill: "#fff7eb",
       "pointer-events": "none",
     });
-    tag.textContent = player === "q" ? "snap / drop" : `${routeMap[player]} - ${routeTree[routeMap[player]]}`;
+    tag.textContent = player === "q" ? "snap / drop" : `${routeMap[player]} ${routeShortNames[routeMap[player]]}`;
     target.appendChild(tag);
   });
 }
@@ -2093,18 +2118,18 @@ function drawDefense(target, defense, offensePositions, progress) {
       createSvgElement("circle", {
         cx: defender.position.x,
         cy: defender.position.y,
-        r: 20,
+        r: 25,
         fill: defenseColors[defense],
         stroke: "rgba(19,42,30,0.82)",
-        "stroke-width": 4,
+        "stroke-width": 5,
       }),
     );
     const label = createSvgElement("text", {
       x: defender.position.x,
-      y: defender.position.y + 5,
+      y: defender.position.y + 7,
       "text-anchor": "middle",
       "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
-      "font-size": "18",
+      "font-size": "23",
       fill: "#132a1e",
     });
     label.textContent = defender.label;
