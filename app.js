@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.13";
+const APP_VERSION = "v1.14";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -2412,6 +2412,24 @@ function drawDecisionNode(target, x, y, color) {
   );
 }
 
+function drawStar(target, cx, cy, radius, color) {
+  const points = [];
+  for (let i = 0; i < 10; i += 1) {
+    const r = i % 2 === 0 ? radius : radius * 0.42;
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    points.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+  }
+  target.appendChild(
+    createSvgElement("polygon", {
+      points: points.join(" "),
+      fill: color,
+      stroke: "#1b2431",
+      "stroke-width": 2,
+      "stroke-linejoin": "round",
+    }),
+  );
+}
+
 function drawConcepts(target, snapshot) {
   const alignment = getSnapshotAlignment(snapshot);
   const q = alignment.q;
@@ -2514,6 +2532,12 @@ function drawConcepts(target, snapshot) {
       dasharray: "6 8",
       marker: "arrowhead-option",
     });
+  }
+
+  // Star-flag the first option — the player who gets the ball on the option.
+  // Offset to the top-right shoulder so it clears the player circle (drawn later).
+  if (conceptValue(snapshot, "option") !== "none") {
+    drawStar(target, o.x + 34, o.y - 34, 14, "#ffd23f");
   }
 
   switch (conceptValue(snapshot, "option")) {
