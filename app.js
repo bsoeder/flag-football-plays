@@ -233,6 +233,8 @@ const playLibrary = [
 
 const routePlayers = ["x", "y", "z", "c"];
 const allPlayers = ["x", "y", "z", "c", "q"];
+const playerLabels = { x: "X", y: "Y", z: "Z", c: "C", q: "QB" };
+const defaultOptionCarrier = "q";
 const fieldWidth = 1000;
 const fieldHeight = 600;
 const fieldAspectRatio = fieldWidth / fieldHeight;
@@ -399,6 +401,8 @@ const conceptInputs = {
   option: document.querySelector("#option-concept-select"),
 };
 
+const optionCarrierSelect = document.querySelector("#option-carrier-select");
+
 const svgNs = "http://www.w3.org/2000/svg";
 const customPlaysKey = "flag-football-custom-plays";
 const playbooksKey = "flag-football-playbooks";
@@ -518,7 +522,12 @@ function currentPlaySnapshot() {
     routeOverrides: cloneRouteOverrides(routeOverrides),
     alignmentOverrides: cloneAlignmentOverrides(alignmentOverrides),
     concepts: getCurrentConcepts(),
+    optionCarrier: optionCarrierSelect.value,
   };
+}
+
+function normalizeOptionCarrier(value) {
+  return allPlayers.includes(value) ? value : defaultOptionCarrier;
 }
 
 function applySnapshot(snapshot) {
@@ -530,6 +539,7 @@ function applySnapshot(snapshot) {
   routeOverrides = normalized.routeOverrides;
   alignmentOverrides = normalized.alignmentOverrides;
   applyConcepts(normalized.concepts);
+  optionCarrierSelect.value = normalized.optionCarrier;
   setPlayCode(normalized.code, { preserveOverrides: true });
 }
 
@@ -542,6 +552,7 @@ function normalizeSnapshot(snapshot) {
     routeOverrides: normalizeRouteOverrides(snapshot?.routeOverrides),
     alignmentOverrides: normalizeAlignmentOverrides(snapshot?.alignmentOverrides),
     concepts: normalizeConcepts(snapshot?.concepts),
+    optionCarrier: normalizeOptionCarrier(snapshot?.optionCarrier),
   };
 }
 
@@ -1930,6 +1941,13 @@ function buildConceptOptions() {
   });
 }
 
+function buildOptionCarrierOptions() {
+  optionCarrierSelect.innerHTML = allPlayers
+    .map((player) => `<option value="${player}">${escapeHtml(playerLabels[player] || player.toUpperCase())}</option>`)
+    .join("");
+  optionCarrierSelect.value = defaultOptionCarrier;
+}
+
 function buildLegend() {
   const routeCards = Object.entries(routeTree)
     .concat([[runRouteValue, "Run (ball carrier)"]])
@@ -2177,6 +2195,10 @@ function routeCodeForPlayer(snapshot, player) {
 
 function conceptValue(snapshot, kind) {
   return normalizeConcepts(snapshot.concepts)[kind];
+}
+
+function optionCarrierValue(snapshot) {
+  return normalizeOptionCarrier(snapshot.optionCarrier);
 }
 
 function getRoutePoints(snapshot, player) {
@@ -2476,19 +2498,37 @@ function drawConcepts(target, snapshot) {
       break;
   }
 
+  const optionCarrier = optionCarrierValue(snapshot);
+  const o = alignment[optionCarrier] || q;
+  // The give/pitch teammate should never be the carrier themselves; fall back to the QB spot.
+  const giveMate = (playerKey) => (playerKey === optionCarrier ? q : alignment[playerKey] || q);
+  const gc = giveMate("c");
+  const gl = giveMate(leftPlayer);
+  const gr = giveMate(rightPlayer);
+
+  // When someone other than the QB carries the option, show the snap/handoff that gets them the ball first.
+  if (conceptValue(snapshot, "option") !== "none" && optionCarrier !== "q") {
+    drawStyledPath(target, [[q.x, q.y], [o.x, o.y]], {
+      stroke: conceptColors.option,
+      width: 4,
+      dasharray: "6 8",
+      marker: "arrowhead-option",
+    });
+  }
+
   switch (conceptValue(snapshot, "option")) {
     case "read-left": {
-      const mesh = [q.x, q.y - 52];
-      drawStyledPath(target, [[q.x, q.y], mesh], {
+      const mesh = [o.x, o.y - 52];
+      drawStyledPath(target, [[o.x, o.y], mesh], {
         stroke: conceptColors.option,
         width: 5,
       });
-      drawStyledPath(target, [mesh, [q.x - 110, q.y - 130]], {
+      drawStyledPath(target, [mesh, [o.x - 110, o.y - 130]], {
         stroke: conceptColors.option,
         width: 5,
         marker: "arrowhead-option",
       });
-      drawStyledPath(target, [mesh, [c.x - 24, c.y - 126]], {
+      drawStyledPath(target, [mesh, [gc.x - 24, gc.y - 126]], {
         stroke: conceptColors.option,
         width: 4,
         dasharray: "10 8",
@@ -2498,17 +2538,17 @@ function drawConcepts(target, snapshot) {
       break;
     }
     case "read-right": {
-      const mesh = [q.x, q.y - 52];
-      drawStyledPath(target, [[q.x, q.y], mesh], {
+      const mesh = [o.x, o.y - 52];
+      drawStyledPath(target, [[o.x, o.y], mesh], {
         stroke: conceptColors.option,
         width: 5,
       });
-      drawStyledPath(target, [mesh, [q.x + 110, q.y - 130]], {
+      drawStyledPath(target, [mesh, [o.x + 110, o.y - 130]], {
         stroke: conceptColors.option,
         width: 5,
         marker: "arrowhead-option",
       });
-      drawStyledPath(target, [mesh, [c.x + 24, c.y - 126]], {
+      drawStyledPath(target, [mesh, [gc.x + 24, gc.y - 126]], {
         stroke: conceptColors.option,
         width: 4,
         dasharray: "10 8",
@@ -2518,13 +2558,13 @@ function drawConcepts(target, snapshot) {
       break;
     }
     case "speed-left": {
-      const pitch = [q.x - 50, q.y - 62];
-      drawStyledPath(target, [[q.x, q.y], pitch, [q.x - 150, q.y - 126]], {
+      const pitch = [o.x - 50, o.y - 62];
+      drawStyledPath(target, [[o.x, o.y], pitch, [o.x - 150, o.y - 126]], {
         stroke: conceptColors.option,
         width: 5,
         marker: "arrowhead-option",
       });
-      drawStyledPath(target, [pitch, [leftPoint.x + 28, leftPoint.y - 68]], {
+      drawStyledPath(target, [pitch, [gl.x + 28, gl.y - 68]], {
         stroke: conceptColors.option,
         width: 4,
         dasharray: "10 8",
@@ -2534,13 +2574,13 @@ function drawConcepts(target, snapshot) {
       break;
     }
     case "speed-right": {
-      const pitch = [q.x + 50, q.y - 62];
-      drawStyledPath(target, [[q.x, q.y], pitch, [q.x + 150, q.y - 126]], {
+      const pitch = [o.x + 50, o.y - 62];
+      drawStyledPath(target, [[o.x, o.y], pitch, [o.x + 150, o.y - 126]], {
         stroke: conceptColors.option,
         width: 5,
         marker: "arrowhead-option",
       });
-      drawStyledPath(target, [pitch, [rightPoint.x - 28, rightPoint.y - 68]], {
+      drawStyledPath(target, [pitch, [gr.x - 28, gr.y - 68]], {
         stroke: conceptColors.option,
         width: 4,
         dasharray: "10 8",
@@ -2550,8 +2590,8 @@ function drawConcepts(target, snapshot) {
       break;
     }
     case "rpo-bubble": {
-      const mesh = [q.x, q.y - 46];
-      drawStyledPath(target, [[q.x, q.y], mesh, [c.x, c.y - 140]], {
+      const mesh = [o.x, o.y - 46];
+      drawStyledPath(target, [[o.x, o.y], mesh, [gc.x, gc.y - 140]], {
         stroke: conceptColors.option,
         width: 5,
         marker: "arrowhead-option",
@@ -3122,6 +3162,11 @@ function bindEvents() {
       stopSimulationSilently();
       render();
     });
+  });
+
+  optionCarrierSelect.addEventListener("change", () => {
+    stopSimulationSilently();
+    render();
   });
 
   randomPlayButton.addEventListener("click", () => {
@@ -3929,6 +3974,7 @@ function registerAppShell() {
 
 buildRouteOptions();
 buildConceptOptions();
+buildOptionCarrierOptions();
 buildLegend();
 bindEvents();
 syncSelectorsFromCode(getPlayCode());
