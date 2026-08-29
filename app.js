@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.14";
+const APP_VERSION = "v1.15";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -523,11 +523,16 @@ function currentPlaySnapshot() {
     alignmentOverrides: cloneAlignmentOverrides(alignmentOverrides),
     concepts: getCurrentConcepts(),
     optionCarrier: optionCarrierSelect.value,
+    type: savePlayType && playTypeLibrary[savePlayType.value] ? savePlayType.value : "pass",
   };
 }
 
 function normalizeOptionCarrier(value) {
   return allPlayers.includes(value) ? value : defaultOptionCarrier;
+}
+
+function normalizePlayType(value) {
+  return value && playTypeLibrary[value] ? value : "pass";
 }
 
 function applySnapshot(snapshot) {
@@ -540,6 +545,9 @@ function applySnapshot(snapshot) {
   alignmentOverrides = normalized.alignmentOverrides;
   applyConcepts(normalized.concepts);
   optionCarrierSelect.value = normalized.optionCarrier;
+  if (savePlayType && playTypeLibrary[normalized.type]) {
+    savePlayType.value = normalized.type;
+  }
   setPlayCode(normalized.code, { preserveOverrides: true });
 }
 
@@ -553,6 +561,7 @@ function normalizeSnapshot(snapshot) {
     alignmentOverrides: normalizeAlignmentOverrides(snapshot?.alignmentOverrides),
     concepts: normalizeConcepts(snapshot?.concepts),
     optionCarrier: normalizeOptionCarrier(snapshot?.optionCarrier),
+    type: normalizePlayType(snapshot?.type),
   };
 }
 
@@ -2536,8 +2545,10 @@ function drawConcepts(target, snapshot) {
 
   // Star-flag the first option — the player who gets the ball on the option.
   // Offset to the top-right shoulder so it clears the player circle (drawn later).
+  // Green flags a pass (the first option throws it); gold otherwise (keep/pitch).
   if (conceptValue(snapshot, "option") !== "none") {
-    drawStar(target, o.x + 34, o.y - 34, 14, "#ffd23f");
+    const starColor = normalizePlayType(snapshot.type) === "pass" ? conceptColors.run : "#ffd23f";
+    drawStar(target, o.x + 34, o.y - 34, 14, starColor);
   }
 
   switch (conceptValue(snapshot, "option")) {
@@ -3192,6 +3203,12 @@ function bindEvents() {
     stopSimulationSilently();
     render();
   });
+
+  if (savePlayType) {
+    savePlayType.addEventListener("change", () => {
+      render();
+    });
+  }
 
   randomPlayButton.addEventListener("click", () => {
     stopSimulationSilently();
