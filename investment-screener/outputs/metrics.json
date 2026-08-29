@@ -1,0 +1,63 @@
+{
+  "data_source": "offline-simulated",
+  "note": "Metrics are computed on CALIBRATED SIMULATED data because this environment blocks egress to sec.gov. Run with --live once sec.gov is reachable to reproduce on real filings; the pipeline code is identical.",
+  "outcome": "same-CIK larger follow-on Form D within 3 years",
+  "split": {
+    "train_cohorts": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018
+    ],
+    "test_cohorts": [
+      2019,
+      2020,
+      2021
+    ],
+    "n_train": 16274,
+    "n_test": 9531,
+    "base_rate_train": 0.2368,
+    "base_rate_test": 0.2411
+  },
+  "models": [
+    {
+      "name": "logistic_regression",
+      "auc": 0.7186,
+      "avg_precision": 0.4648,
+      "brier": 0.1609,
+      "lift_top_decile": 2.38,
+      "precision_at_10pct": 0.5729,
+      "base_rate": 0.2411,
+      "feature_importance": {
+        "log_investor_count": 1.099,
+        "log_amount_per_investor": 0.999,
+        "log_amount_sold": -0.912,
+        "ind_technology": 0.15,
+        "revenue_stage": 0.14,
+        "ind_health_care": 0.133,
+        "ind_real_estate": -0.11,
+        "fill_rate": -0.064,
+        "inc_age_ord": 0.031,
+        "log_min_ticket": 0.024,
+        "ind_financial_services": 0.024,
+        "log_offering_amount": -0.019,
+        "is_corporation": 0.01,
+        "has_revenue": 0.009,
+        "has_nonaccredited": 0.002,
+        "ind_commercial": 0.002,
+        "is_pooled_fund": 0.0
+      }
+    },
+    {
+      "name": "gradient_boosting",
+      "auc": 0.7166,
+      "avg_precision": 0.4599,
+      "brier": 0.1617,
+      "lift_top_decile": 2.38,
+      "precision_at_10pct": 0.574,
+      "base_rate": 0.2411,
+      "feature_importance": {}
+    }
+  ]
+}
