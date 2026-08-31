@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.17";
+const APP_VERSION = "v1.18";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -235,6 +235,7 @@ const routePlayers = ["x", "y", "z", "c"];
 const allPlayers = ["x", "y", "z", "c", "q"];
 const playerLabels = { x: "X", y: "Y", z: "Z", c: "C", q: "QB" };
 const defaultOptionCarrier = "q";
+const autoFirstTouch = "auto";
 const fieldWidth = 1000;
 const fieldHeight = 600;
 const fieldAspectRatio = fieldWidth / fieldHeight;
@@ -402,6 +403,7 @@ const conceptInputs = {
 };
 
 const optionCarrierSelect = document.querySelector("#option-carrier-select");
+const firstTouchSelect = document.querySelector("#first-touch-select");
 
 const svgNs = "http://www.w3.org/2000/svg";
 const customPlaysKey = "flag-football-custom-plays";
@@ -523,12 +525,17 @@ function currentPlaySnapshot() {
     alignmentOverrides: cloneAlignmentOverrides(alignmentOverrides),
     concepts: getCurrentConcepts(),
     optionCarrier: optionCarrierSelect.value,
+    firstTouch: firstTouchSelect.value,
     type: savePlayType && playTypeLibrary[savePlayType.value] ? savePlayType.value : "pass",
   };
 }
 
 function normalizeOptionCarrier(value) {
   return allPlayers.includes(value) ? value : defaultOptionCarrier;
+}
+
+function normalizeFirstTouch(value) {
+  return allPlayers.includes(value) ? value : autoFirstTouch;
 }
 
 function normalizePlayType(value) {
@@ -545,6 +552,7 @@ function applySnapshot(snapshot) {
   alignmentOverrides = normalized.alignmentOverrides;
   applyConcepts(normalized.concepts);
   optionCarrierSelect.value = normalized.optionCarrier;
+  firstTouchSelect.value = normalized.firstTouch;
   if (savePlayType && playTypeLibrary[normalized.type]) {
     savePlayType.value = normalized.type;
   }
@@ -561,6 +569,7 @@ function normalizeSnapshot(snapshot) {
     alignmentOverrides: normalizeAlignmentOverrides(snapshot?.alignmentOverrides),
     concepts: normalizeConcepts(snapshot?.concepts),
     optionCarrier: normalizeOptionCarrier(snapshot?.optionCarrier),
+    firstTouch: normalizeFirstTouch(snapshot?.firstTouch),
     type: normalizePlayType(snapshot?.type),
   };
 }
@@ -1957,6 +1966,17 @@ function buildOptionCarrierOptions() {
   optionCarrierSelect.value = defaultOptionCarrier;
 }
 
+function buildFirstTouchOptions() {
+  const auto = `<option value="${autoFirstTouch}">Auto</option>`;
+  firstTouchSelect.innerHTML = auto
+    .concat(
+      allPlayers
+        .map((player) => `<option value="${player}">${escapeHtml(playerLabels[player] || player.toUpperCase())}</option>`)
+        .join(""),
+    );
+  firstTouchSelect.value = autoFirstTouch;
+}
+
 function buildLegend() {
   const routeCards = Object.entries(routeTree)
     .concat([[runRouteValue, "Run (ball carrier)"]])
@@ -2212,6 +2232,11 @@ function optionCarrierValue(snapshot) {
 
 // The player who first gets the ball on the play — the "first touch" to star-flag.
 function firstTouchPlayer(snapshot, alignment) {
+  // A manual First Touch selection overrides the automatic read.
+  const override = normalizeFirstTouch(snapshot.firstTouch);
+  if (override !== autoFirstTouch) {
+    return override;
+  }
   if (conceptValue(snapshot, "option") !== "none") {
     return optionCarrierValue(snapshot);
   }
@@ -3236,6 +3261,11 @@ function bindEvents() {
     render();
   });
 
+  firstTouchSelect.addEventListener("change", () => {
+    stopSimulationSilently();
+    render();
+  });
+
   if (savePlayType) {
     savePlayType.addEventListener("change", () => {
       render();
@@ -4048,6 +4078,7 @@ function registerAppShell() {
 buildRouteOptions();
 buildConceptOptions();
 buildOptionCarrierOptions();
+buildFirstTouchOptions();
 buildLegend();
 bindEvents();
 syncSelectorsFromCode(getPlayCode());
