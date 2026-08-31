@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.16";
+const APP_VERSION = "v1.17";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -2694,8 +2694,25 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
   const alignment = getSnapshotAlignment(snapshot);
   const routeMap = { x: snapshot.code[0], y: snapshot.code[1], z: snapshot.code[2], c: snapshot.code[3], q: "QB" };
   const currentPositions = positions || alignment;
+  const ballCarrier = firstTouchPlayer(snapshot, alignment);
+  const carrierColor = normalizePlayType(snapshot.type) === "pass" ? conceptColors.run : "#ffd23f";
 
   Object.entries(currentPositions).forEach(([player, position]) => {
+    // Highlight the player running with the ball with a colored ring behind their marker.
+    if (player === ballCarrier) {
+      target.appendChild(
+        createSvgElement("circle", {
+          cx: position.x,
+          cy: position.y,
+          r: (player === "q" ? 30 : 28) + 9,
+          fill: "none",
+          stroke: carrierColor,
+          "stroke-width": 6,
+          "pointer-events": "none",
+        }),
+      );
+    }
+
     const circleAttrs = {
       cx: position.x,
       cy: position.y,
