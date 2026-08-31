@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.18";
+const APP_VERSION = "v1.19";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -410,6 +410,7 @@ const customPlaysKey = "flag-football-custom-plays";
 const playbooksKey = "flag-football-playbooks";
 const nameOverridesKey = "flag-football-name-overrides";
 const playOverridesKey = "flag-football-play-overrides";
+const deletedBaseKey = "flag-football-deleted-base";
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -419,6 +420,7 @@ let customPlays = loadCustomPlays();
 let playbooks = loadPlaybooks();
 let nameOverrides = loadNameOverrides();
 let playOverrides = loadPlayOverrides();
+let deletedBaseIds = loadDeletedBaseIds();
 let playbookSubview = "plays";
 let openPickerBookId = null;
 let editingPlayId = null;
@@ -890,6 +892,7 @@ function currentDataBundle() {
     playbooks,
     nameOverrides,
     overrides: playOverrides,
+    deletedBaseIds,
   };
 }
 
@@ -952,7 +955,22 @@ function mergeDataBundle(bundle) {
   if (changedOverrides) {
     persistPlayOverrides();
   }
-  return { plays: addedPlays, playbooks: addedBooks };
+
+  let changedDeleted = false;
+  if (Array.isArray(bundle.deletedBaseIds)) {
+    const known = new Set(deletedBaseIds);
+    bundle.deletedBaseIds.forEach((id) => {
+      if (typeof id === "string" && !known.has(id)) {
+        deletedBaseIds.push(id);
+        known.add(id);
+        changedDeleted = true;
+      }
+    });
+  }
+  if (changedDeleted) {
+    persistDeletedBaseIds();
+  }
+  return { plays: addedPlays, playbooks: addedBooks, deleted: changedDeleted };
 }
 
 // Load the shared library file committed to the repo, so a fresh device picks up
@@ -965,7 +983,7 @@ async function loadSharedLibrary() {
     }
     const bundle = await response.json();
     const added = mergeDataBundle(bundle);
-    if (added.plays || added.playbooks) {
+    if (added.plays || added.playbooks || added.deleted) {
       renderPlaybookLibrary();
       renderPlaybooks();
     }
@@ -1010,7 +1028,7 @@ function setSyncStatus(message) {
 // Stores the bundle as three rows (Key = plays | playbooks | nameOverrides,
 // Data = JSON) in an Airtable table, so plays/playbooks sync across devices.
 const airtableConfigKey = "flag-football-airtable";
-const airtableKeys = ["plays", "playbooks", "nameOverrides", "overrides"];
+const airtableKeys = ["plays", "playbooks", "nameOverrides", "overrides", "deletedBaseIds"];
 let airtableConfig = loadAirtableConfig();
 let airtablePushTimer = null;
 let airtableBusy = false;
@@ -1095,11 +1113,12 @@ async function airtablePush() {
   await airtableUpsert(records, "playbooks", JSON.stringify(bundle.playbooks));
   await airtableUpsert(records, "nameOverrides", JSON.stringify(bundle.nameOverrides));
   await airtableUpsert(records, "overrides", JSON.stringify(bundle.overrides));
+  await airtableUpsert(records, "deletedBaseIds", JSON.stringify(bundle.deletedBaseIds));
 }
 
 async function airtablePullBundle() {
   const records = await airtableGetRecords();
-  const bundle = { plays: [], playbooks: [], nameOverrides: {}, overrides: {} };
+  const bundle = { plays: [], playbooks: [], nameOverrides: {}, overrides: {}, deletedBaseIds: [] };
   records.forEach((record) => {
     if (!airtableKeys.includes(record.key) || typeof record.data !== "string") {
       return;
@@ -1139,10 +1158,16 @@ function applyCloudBundle(bundle) {
     playOverrides = { ...playOverrides, ...bundle.overrides };
   }
 
+  // Deletions of built-in plays are a union across devices (a delete anywhere sticks).
+  if (Array.isArray(bundle.deletedBaseIds)) {
+    deletedBaseIds = Array.from(new Set(deletedBaseIds.concat(bundle.deletedBaseIds.filter((id) => typeof id === "string"))));
+  }
+
   persistCustomPlays();
   persistPlaybooks();
   persistNameOverrides();
   persistPlayOverrides();
+  persistDeletedBaseIds();
 }
 
 // Pull (cloud wins for shared items, so edits propagate) then push local-only items up.
@@ -1205,10 +1230,12 @@ async function airtablePullReplace() {
       .map(normalizePlaybook);
     nameOverrides = bundle.nameOverrides && typeof bundle.nameOverrides === "object" ? bundle.nameOverrides : {};
     playOverrides = bundle.overrides && typeof bundle.overrides === "object" ? bundle.overrides : {};
+    deletedBaseIds = Array.isArray(bundle.deletedBaseIds) ? bundle.deletedBaseIds.filter((id) => typeof id === "string") : [];
     persistCustomPlays();
     persistPlaybooks();
     persistNameOverrides();
     persistPlayOverrides();
+    persistDeletedBaseIds();
     renderPlaybookLibrary();
     renderPlaybooks();
     setSyncStatus(`Replaced local data with the cloud copy (${customPlays.length} play(s), ${playbooks.length} playbook(s)).`);
@@ -1339,13 +1366,31 @@ function persistPlayOverrides() {
   scheduleAirtablePush();
 }
 
+function loadDeletedBaseIds() {
+  try {
+    const raw = window.localStorage.getItem(deletedBaseKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistDeletedBaseIds() {
+  window.localStorage.setItem(deletedBaseKey, JSON.stringify(deletedBaseIds));
+  scheduleAirtablePush();
+}
+
 // Every play the app knows about: the built-in install (with any edits applied in place)
 // plus the user's saved plays.
 function allPlays() {
-  const base = playLibrary.map((play) => {
-    const override = playOverrides[play.id];
-    return override ? { ...override, id: play.id, custom: false, overridden: true } : play;
-  });
+  const hidden = new Set(deletedBaseIds);
+  const base = playLibrary
+    .filter((play) => !hidden.has(play.id))
+    .map((play) => {
+      const override = playOverrides[play.id];
+      return override ? { ...override, id: play.id, custom: false, overridden: true } : play;
+    });
   return base.concat(customPlays);
 }
 
@@ -1809,10 +1854,9 @@ function openPlayFullscreen(play) {
   renderField(pfField, snapshot);
 
   if (pfDelete) {
-    // Custom plays can be deleted; edited built-ins can be reset to the original.
-    const canDelete = play.custom || play.overridden;
-    pfDelete.classList.toggle("is-hidden", !canDelete);
-    pfDelete.textContent = play.overridden && !play.custom ? "Reset to original" : "Delete";
+    // Any play can be deleted — custom plays are removed, built-ins are hidden.
+    pfDelete.classList.remove("is-hidden");
+    pfDelete.textContent = "Delete";
   }
   refreshFullscreenPlaybookOptions();
 
@@ -1874,19 +1918,45 @@ function resetPlayOverride(id) {
   renderPlaybooks();
 }
 
+// Hide a built-in play by id (built-ins live in code, so "delete" means hide it and
+// drop any edit/rename/playbook reference). Persisted and synced like the other data.
+function deleteBasePlay(id) {
+  if (!deletedBaseIds.includes(id)) {
+    deletedBaseIds.push(id);
+    persistDeletedBaseIds();
+  }
+  if (playOverrides[id]) {
+    delete playOverrides[id];
+    persistPlayOverrides();
+  }
+  if (nameOverrides[id]) {
+    delete nameOverrides[id];
+    persistNameOverrides();
+  }
+  playbooks = playbooks.map((book) => ({ ...book, playIds: book.playIds.filter((pid) => pid !== id) }));
+  persistPlaybooks();
+  renderPlaybookLibrary();
+  renderPlaybooks();
+}
+
 function deleteFullscreenPlay() {
   if (!fullscreenPlay) {
     return;
   }
   const id = fullscreenPlay.id;
+  const shownName = displayName(fullscreenPlay);
   if (fullscreenPlay.custom) {
     closePlayFullscreen();
     deleteCustomPlay(id);
-  } else if (fullscreenPlay.overridden) {
-    // Built-in with a saved edit: revert to the original install play.
-    closePlayFullscreen();
-    resetPlayOverride(id);
+    return;
   }
+  // Any built-in play can be deleted (hidden) too — confirm since it's an install play.
+  if (!window.confirm(`Delete “${shownName}” from your library?`)) {
+    return;
+  }
+  closePlayFullscreen();
+  deleteBasePlay(id);
+  setSaveStatus(`Deleted “${shownName}”.`);
 }
 
 function commitFullscreenRename() {
