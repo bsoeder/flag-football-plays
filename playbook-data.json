@@ -1,8 +1,208 @@
 {
   "version": 1,
-  "exportedAt": "2026-08-24T00:00:00.000Z",
-  "plays": [],
-  "playbooks": [],
+  "exportedAt": "2026-08-31T00:00:00.000Z",
+  "plays": [
+    {
+      "id": "disciples-01-motion-jet-sweep",
+      "name": "Disciples: MOTION Jet Sweep",
+      "type": "run",
+      "custom": true,
+      "formation": "pro",
+      "code": "9119",
+      "bunchSide": "left",
+      "proMotion": "right",
+      "concepts": { "run": "jet-right", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-02-draw",
+      "name": "Disciples: Draw",
+      "type": "run",
+      "custom": true,
+      "formation": "pro",
+      "code": "4444",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "qb-draw", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-03-motion-rpo-roll-right",
+      "name": "Disciples: MOTION RPO Roll Right",
+      "type": "option",
+      "custom": true,
+      "formation": "pro",
+      "code": "1616",
+      "bunchSide": "left",
+      "proMotion": "right",
+      "concepts": { "run": "none", "fake": "play-action", "option": "rpo-bubble" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-04-rpo",
+      "name": "Disciples: RPO",
+      "type": "option",
+      "custom": true,
+      "formation": "bunch",
+      "code": "2262",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "none", "fake": "none", "option": "read-right" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-05-rpo-delay-drag",
+      "name": "Disciples: RPO Delay Drag",
+      "type": "option",
+      "custom": true,
+      "formation": "bunch",
+      "code": "6642",
+      "bunchSide": "right",
+      "proMotion": "stay",
+      "concepts": { "run": "none", "fake": "none", "option": "rpo-bubble" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-06-motion-rpo",
+      "name": "Disciples: MOTION RPO",
+      "type": "option",
+      "custom": true,
+      "formation": "pro",
+      "code": "9611",
+      "bunchSide": "left",
+      "proMotion": "left",
+      "concepts": { "run": "none", "fake": "none", "option": "rpo-bubble" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-07-motion",
+      "name": "Disciples: Motion",
+      "type": "pass",
+      "custom": true,
+      "formation": "pro",
+      "code": "1747",
+      "bunchSide": "left",
+      "proMotion": "right",
+      "concepts": { "run": "none", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-08-motion-out-pass",
+      "name": "Disciples: MOTION Out – Pass",
+      "type": "pass",
+      "custom": true,
+      "formation": "trips",
+      "code": "1155",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "none", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-09-counter-screen",
+      "name": "Disciples: Counter Screen",
+      "type": "trick",
+      "custom": true,
+      "formation": "pro",
+      "code": "0616",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "reverse", "fake": "reverse-fake", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-10-counter-screen-trips",
+      "name": "Disciples: Counter Screen (Trips)",
+      "type": "pass",
+      "custom": true,
+      "formation": "trips",
+      "code": "0155",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "reverse", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-11-rpo-qb-counter-sprint-right",
+      "name": "Disciples: RPO – QB Counter Sprint Right",
+      "type": "option",
+      "custom": true,
+      "formation": "pro",
+      "code": "9296",
+      "bunchSide": "left",
+      "proMotion": "right",
+      "concepts": { "run": "none", "fake": "play-action", "option": "speed-right" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    },
+    {
+      "id": "disciples-12-motion",
+      "name": "Disciples: MOTION",
+      "type": "pass",
+      "custom": true,
+      "formation": "bunch",
+      "code": "2626",
+      "bunchSide": "left",
+      "proMotion": "stay",
+      "concepts": { "run": "none", "fake": "none", "option": "none" },
+      "optionCarrier": "q",
+      "routeOverrides": {},
+      "alignmentOverrides": {}
+    }
+  ],
+  "playbooks": [
+    {
+      "id": "book-disciples-pro",
+      "name": "Disciples – Pro",
+      "playIds": [
+        "disciples-01-motion-jet-sweep",
+        "disciples-02-draw",
+        "disciples-03-motion-rpo-roll-right",
+        "disciples-06-motion-rpo",
+        "disciples-07-motion",
+        "disciples-09-counter-screen",
+        "disciples-11-rpo-qb-counter-sprint-right"
+      ]
+    },
+    {
+      "id": "book-disciples-bunch",
+      "name": "Disciples – Bunch",
+      "playIds": [
+        "disciples-04-rpo",
+        "disciples-05-rpo-delay-drag",
+        "disciples-12-motion"
+      ]
+    },
+    {
+      "id": "book-disciples-trips",
+      "name": "Disciples – Trips",
+      "playIds": [
+        "disciples-08-motion-out-pass",
+        "disciples-10-counter-screen-trips"
+      ]
+    }
+  ],
   "nameOverrides": {},
   "overrides": {}
 }
