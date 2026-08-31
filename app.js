@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.15";
+const APP_VERSION = "v1.16";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -2210,6 +2210,22 @@ function optionCarrierValue(snapshot) {
   return normalizeOptionCarrier(snapshot.optionCarrier);
 }
 
+// The player who first gets the ball on the play — the "first touch" to star-flag.
+function firstTouchPlayer(snapshot, alignment) {
+  if (conceptValue(snapshot, "option") !== "none") {
+    return optionCarrierValue(snapshot);
+  }
+  const run = conceptValue(snapshot, "run");
+  if (run === "c-dive") {
+    return "c";
+  }
+  if (run === "reverse") {
+    return rightEdgePlayer(alignment);
+  }
+  // QB draw, jet motion, and every pass/plain call: the QB takes the snap first.
+  return "q";
+}
+
 function getRoutePoints(snapshot, player) {
   const alignment = getSnapshotAlignment(snapshot);
   const defaults = routePoints(routeCodeForPlayer(snapshot, player), alignment[player]);
@@ -2543,13 +2559,12 @@ function drawConcepts(target, snapshot) {
     });
   }
 
-  // Star-flag the first option — the player who gets the ball on the option.
+  // Star-flag the first touch — the player who first gets the ball on every play.
   // Offset to the top-right shoulder so it clears the player circle (drawn later).
-  // Green flags a pass (the first option throws it); gold otherwise (keep/pitch).
-  if (conceptValue(snapshot, "option") !== "none") {
-    const starColor = normalizePlayType(snapshot.type) === "pass" ? conceptColors.run : "#ffd23f";
-    drawStar(target, o.x + 34, o.y - 34, 14, starColor);
-  }
+  // Green flags a pass (the first touch throws it); gold otherwise (keep/run/pitch).
+  const firstTouch = alignment[firstTouchPlayer(snapshot, alignment)] || q;
+  const starColor = normalizePlayType(snapshot.type) === "pass" ? conceptColors.run : "#ffd23f";
+  drawStar(target, firstTouch.x + 34, firstTouch.y - 34, 14, starColor);
 
   switch (conceptValue(snapshot, "option")) {
     case "read-left": {
