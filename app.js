@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.19";
+const APP_VERSION = "v1.20";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -404,6 +404,7 @@ const conceptInputs = {
 
 const optionCarrierSelect = document.querySelector("#option-carrier-select");
 const firstTouchSelect = document.querySelector("#first-touch-select");
+const qbRouteSelect = document.querySelector("#qb-route-select");
 
 const svgNs = "http://www.w3.org/2000/svg";
 const customPlaysKey = "flag-football-custom-plays";
@@ -528,6 +529,7 @@ function currentPlaySnapshot() {
     concepts: getCurrentConcepts(),
     optionCarrier: optionCarrierSelect.value,
     firstTouch: firstTouchSelect.value,
+    qbRoute: qbRouteSelect.value,
     type: savePlayType && playTypeLibrary[savePlayType.value] ? savePlayType.value : "pass",
   };
 }
@@ -538,6 +540,15 @@ function normalizeOptionCarrier(value) {
 
 function normalizeFirstTouch(value) {
   return allPlayers.includes(value) ? value : autoFirstTouch;
+}
+
+// A QB route is a single route-tree value (0-9) or a run (R); "none" means no QB route.
+function normalizeQbRoute(value) {
+  if (value === runRouteValue) {
+    return runRouteValue;
+  }
+  const n = Number(value);
+  return Number.isInteger(n) && routeTree[n] !== undefined ? String(n) : "none";
 }
 
 function normalizePlayType(value) {
@@ -555,6 +566,7 @@ function applySnapshot(snapshot) {
   applyConcepts(normalized.concepts);
   optionCarrierSelect.value = normalized.optionCarrier;
   firstTouchSelect.value = normalized.firstTouch;
+  qbRouteSelect.value = normalized.qbRoute;
   if (savePlayType && playTypeLibrary[normalized.type]) {
     savePlayType.value = normalized.type;
   }
@@ -572,6 +584,7 @@ function normalizeSnapshot(snapshot) {
     concepts: normalizeConcepts(snapshot?.concepts),
     optionCarrier: normalizeOptionCarrier(snapshot?.optionCarrier),
     firstTouch: normalizeFirstTouch(snapshot?.firstTouch),
+    qbRoute: normalizeQbRoute(snapshot?.qbRoute),
     type: normalizePlayType(snapshot?.type),
   };
 }
@@ -2047,6 +2060,16 @@ function buildFirstTouchOptions() {
   firstTouchSelect.value = autoFirstTouch;
 }
 
+function buildQbRouteOptions() {
+  const none = '<option value="none">No QB Route</option>';
+  const routes = Object.entries(routeTree)
+    .map(([value, label]) => `<option value="${value}">${value} - ${escapeHtml(label)}</option>`)
+    .join("");
+  const run = `<option value="${runRouteValue}">${runRouteValue} - Run</option>`;
+  qbRouteSelect.innerHTML = none + routes + run;
+  qbRouteSelect.value = "none";
+}
+
 function buildLegend() {
   const routeCards = Object.entries(routeTree)
     .concat([[runRouteValue, "Run (ball carrier)"]])
@@ -2196,6 +2219,7 @@ function drawFieldBase(target) {
   appendArrowMarker(defs, "arrowhead-run", conceptColors.run);
   appendArrowMarker(defs, "arrowhead-fake", conceptColors.fake);
   appendArrowMarker(defs, "arrowhead-option", conceptColors.option);
+  appendArrowMarker(defs, "arrowhead-qb", playerColors.q);
   target.appendChild(defs);
   target.appendChild(
     createSvgElement("rect", {
@@ -2652,6 +2676,14 @@ function drawConcepts(target, snapshot) {
       dasharray: "6 8",
       marker: "arrowhead-option",
     });
+  }
+
+  // On option plays, the QB can run its own route (e.g. keep-and-throw / scramble path).
+  const qbRoute = normalizeQbRoute(snapshot.qbRoute);
+  if (conceptValue(snapshot, "option") !== "none" && qbRoute !== "none") {
+    const qbPoints = routePoints(qbRoute, q);
+    drawStyledPath(target, qbPoints, { stroke: playerColors.q, width: 11, opacity: 0.18 });
+    drawStyledPath(target, qbPoints, { stroke: playerColors.q, width: 6, marker: "arrowhead-qb" });
   }
 
   // Star-flag the first touch — the player who first gets the ball on every play.
@@ -3332,6 +3364,11 @@ function bindEvents() {
   });
 
   firstTouchSelect.addEventListener("change", () => {
+    stopSimulationSilently();
+    render();
+  });
+
+  qbRouteSelect.addEventListener("change", () => {
     stopSimulationSilently();
     render();
   });
@@ -4149,6 +4186,7 @@ buildRouteOptions();
 buildConceptOptions();
 buildOptionCarrierOptions();
 buildFirstTouchOptions();
+buildQbRouteOptions();
 buildLegend();
 bindEvents();
 syncSelectorsFromCode(getPlayCode());
