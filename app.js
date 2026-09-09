@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.22";
+const APP_VERSION = "v1.23";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -141,6 +141,7 @@ const conceptLibrary = {
 const modeDescriptions = {
   compose: "Compose routes, runs, fakes, and options on the field.",
   playbooks: "Save the current call or pull a playbook into the field board.",
+  roster: "Keep your player roster and split it into two lines.",
   simulation: "Review leverage and coverage fit against your selected defense.",
 };
 
@@ -365,6 +366,10 @@ const subviewPanels = Array.from(document.querySelectorAll("[data-subview-panel]
 const newPlaybookName = document.querySelector("#new-playbook-name");
 const createPlaybookButton = document.querySelector("#create-playbook-button");
 const playbooksList = document.querySelector("#playbooks-list");
+const rosterLines = document.querySelector("#roster-lines");
+const rosterNameInput = document.querySelector("#roster-name-input");
+const rosterAddLine1 = document.querySelector("#roster-add-line1");
+const rosterAddLine2 = document.querySelector("#roster-add-line2");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataInput = document.querySelector("#import-data-input");
 const syncStatus = document.querySelector("#sync-status");
@@ -412,6 +417,7 @@ const playbooksKey = "flag-football-playbooks";
 const nameOverridesKey = "flag-football-name-overrides";
 const playOverridesKey = "flag-football-play-overrides";
 const deletedBaseKey = "flag-football-deleted-base";
+const rosterKey = "flag-football-roster";
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -422,6 +428,7 @@ let playbooks = loadPlaybooks();
 let nameOverrides = loadNameOverrides();
 let playOverrides = loadPlayOverrides();
 let deletedBaseIds = loadDeletedBaseIds();
+let roster = loadRoster();
 let playbookSubview = "plays";
 let openPickerBookId = null;
 let openBookId = null;
@@ -826,10 +833,19 @@ function renderActiveMode() {
     panel.classList.toggle("is-hidden", panel.dataset.modePanel !== activeMode);
   });
 
-  const activeView = activeMode === "playbooks" ? "playbooks" : "studio";
+  let activeView = "studio";
+  if (activeMode === "playbooks") {
+    activeView = "playbooks";
+  } else if (activeMode === "roster") {
+    activeView = "roster";
+  }
   modeViews.forEach((view) => {
     view.classList.toggle("is-hidden", view.dataset.modeView !== activeView);
   });
+
+  if (activeMode === "roster") {
+    renderRoster();
+  }
 
   stageSubtitle.textContent = modeDescriptions[activeMode];
 }
@@ -1393,6 +1409,99 @@ function loadDeletedBaseIds() {
 function persistDeletedBaseIds() {
   window.localStorage.setItem(deletedBaseKey, JSON.stringify(deletedBaseIds));
   scheduleAirtablePush();
+}
+
+function loadRoster() {
+  try {
+    const raw = window.localStorage.getItem(rosterKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed
+      .filter((player) => player && typeof player.name === "string")
+      .map((player) => ({
+        id: player.id || createId("player"),
+        name: player.name,
+        line: player.line === 2 ? 2 : 1,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function persistRoster() {
+  window.localStorage.setItem(rosterKey, JSON.stringify(roster));
+}
+
+function addRosterPlayer(name, line) {
+  const clean = sanitizeName(name);
+  if (!clean) {
+    return;
+  }
+  roster.push({ id: createId("player"), name: clean, line: line === 2 ? 2 : 1 });
+  persistRoster();
+  renderRoster();
+}
+
+function moveRosterPlayer(id) {
+  const player = roster.find((entry) => entry.id === id);
+  if (!player) {
+    return;
+  }
+  player.line = player.line === 1 ? 2 : 1;
+  persistRoster();
+  renderRoster();
+}
+
+function removeRosterPlayer(id) {
+  roster = roster.filter((entry) => entry.id !== id);
+  persistRoster();
+  renderRoster();
+}
+
+function renderRoster() {
+  if (!rosterLines) {
+    return;
+  }
+
+  const column = (line) => {
+    const players = roster.filter((player) => player.line === line);
+    const otherLine = line === 1 ? 2 : 1;
+    const rows = players.length === 0
+      ? '<p class="field-help">No players yet.</p>'
+      : players
+          .map(
+            (player) => `
+              <div class="roster-player">
+                <span class="roster-player-name">${escapeHtml(player.name)}</span>
+                <span class="roster-player-actions">
+                  <button class="secondary-button roster-move" type="button" data-move-player="${escapeHtml(player.id)}" aria-label="Move ${escapeHtml(player.name)} to Line ${otherLine}">→ L${otherLine}</button>
+                  <button class="book-remove" type="button" data-remove-player="${escapeHtml(player.id)}" aria-label="Remove ${escapeHtml(player.name)}">✕</button>
+                </span>
+              </div>
+            `,
+          )
+          .join("");
+    return `
+      <section class="roster-line">
+        <div class="roster-line-header">
+          <strong>Line ${line}</strong>
+          <span class="book-meta">${players.length} player${players.length === 1 ? "" : "s"}</span>
+        </div>
+        <div class="roster-line-list">${rows}</div>
+      </section>
+    `;
+  };
+
+  rosterLines.innerHTML = column(1) + column(2);
+
+  rosterLines.querySelectorAll("[data-move-player]").forEach((button) => {
+    button.addEventListener("click", () => moveRosterPlayer(button.dataset.movePlayer));
+  });
+  rosterLines.querySelectorAll("[data-remove-player]").forEach((button) => {
+    button.addEventListener("click", () => removeRosterPlayer(button.dataset.removePlayer));
+  });
 }
 
 // Every play the app knows about: the built-in install (with any edits applied in place)
@@ -3432,6 +3541,26 @@ function bindEvents() {
     });
   });
 
+  const addRosterFromInput = (line) => {
+    addRosterPlayer(rosterNameInput.value, line);
+    rosterNameInput.value = "";
+    rosterNameInput.focus();
+  };
+  if (rosterAddLine1) {
+    rosterAddLine1.addEventListener("click", () => addRosterFromInput(1));
+  }
+  if (rosterAddLine2) {
+    rosterAddLine2.addEventListener("click", () => addRosterFromInput(2));
+  }
+  if (rosterNameInput) {
+    rosterNameInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addRosterFromInput(1);
+      }
+    });
+  }
+
   playbookBrowseButtons.forEach((button) => {
     button.addEventListener("click", () => {
       playbookBrowseMode = button.dataset.browse === "type" ? "type" : "formation";
@@ -4302,6 +4431,7 @@ applyConcepts({});
 renderPlaybookLibrary();
 renderPlaybooks();
 renderPlaybookSubview();
+renderRoster();
 const appVersionEl = document.querySelector("#app-version");
 if (appVersionEl) {
   appVersionEl.textContent = APP_VERSION;

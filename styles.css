@@ -1052,6 +1052,64 @@ body.is-fullscreen-open {
   margin-top: 8px;
 }
 
+.roster-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.roster-line {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(19, 42, 30, 0.1);
+}
+
+.roster-line-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.roster-line-header strong {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 1.2rem;
+}
+
+.roster-line-list {
+  display: grid;
+  gap: 8px;
+}
+
+.roster-player {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.roster-player-name {
+  font-weight: 700;
+}
+
+.roster-player-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.roster-move {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+}
+
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

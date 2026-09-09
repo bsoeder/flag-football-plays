@@ -31,6 +31,7 @@
         <nav class="mode-switch" aria-label="App sections">
           <button class="mode-button is-active" type="button" data-mode="compose">Compose Plays</button>
           <button class="mode-button" type="button" data-mode="playbooks">Playbooks</button>
+          <button class="mode-button" type="button" data-mode="roster">Roster</button>
           <button class="mode-button" type="button" data-mode="simulation">Simulation</button>
         </nav>
         <div class="code-chip">
@@ -310,6 +311,22 @@
           </div>
           <div id="playbooks-list" class="playbooks-list"></div>
         </div>
+      </section>
+
+      <section class="roster-view is-hidden" data-mode-view="roster">
+        <div class="playbook-heading">
+          <div class="playbook-heading-copy">
+            <p class="stage-kicker">Team Roster</p>
+            <h2>Roster &amp; Lines</h2>
+            <p class="intro">Keep your player roster split into two lines. Add a player to a line, move players between lines, or drop them.</p>
+          </div>
+          <div class="new-playbook-row">
+            <input id="roster-name-input" type="text" maxlength="40" placeholder="Player name">
+            <button id="roster-add-line1" type="button">Add to Line 1</button>
+            <button id="roster-add-line2" class="secondary-button" type="button">Add to Line 2</button>
+          </div>
+        </div>
+        <div id="roster-lines" class="roster-lines"></div>
       </section>
     </main>
   </div>
