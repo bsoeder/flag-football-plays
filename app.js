@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.21";
+const APP_VERSION = "v1.22";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -1569,6 +1569,20 @@ function renderPlaybookSubview() {
   });
 }
 
+function renamePlaybook(bookId, name) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book) {
+    return;
+  }
+  const clean = sanitizeName(name);
+  if (clean && clean !== book.name) {
+    book.name = clean;
+    persistPlaybooks();
+    refreshFullscreenPlaybookOptions();
+  }
+  renderPlaybooks();
+}
+
 // Reorder a play within a book by swapping it with its neighbour (direction -1 up, +1 down).
 function movePlayInPlaybook(bookId, playId, direction) {
   const book = playbooks.find((entry) => entry.id === bookId);
@@ -1659,7 +1673,7 @@ function renderOpenBook(book) {
       <button class="secondary-button book-back" type="button" data-back-to-folders>← All playbooks</button>
       <div class="book-header">
         <div>
-          <strong>${escapeHtml(book.name)}</strong>
+          <input class="book-name-input" type="text" value="${escapeHtml(book.name)}" data-rename-book="${escapeHtml(book.id)}" aria-label="Playbook name" maxlength="60" />
           <div class="book-meta">${plays.length} play${plays.length === 1 ? "" : "s"}</div>
         </div>
         <div class="book-actions">
@@ -1707,6 +1721,16 @@ function bindPlaybookListEvents() {
       event.stopPropagation();
       const [bookId, playId] = button.dataset.moveDown.split(":");
       movePlayInPlaybook(bookId, playId, 1);
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-rename-book]").forEach((input) => {
+    input.addEventListener("change", () => renamePlaybook(input.dataset.renameBook, input.value));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        input.blur();
+      }
     });
   });
 
