@@ -241,6 +241,26 @@
         "bunch-uno-run6fake5",
         "tictactoe-motion-8fakefake1"
       ]
+    },
+    {
+      "id": "book-script-trick-a",
+      "name": "Script & Trick A",
+      "playIds": [
+        "optimus-prime-2222",
+        "trips-right-8636",
+        "wheeljack-right-9586",
+        "starscream-left"
+      ]
+    },
+    {
+      "id": "book-script-trick-b",
+      "name": "Script & Trick B",
+      "playIds": [
+        "optimus-prime-2222",
+        "bunch-pass-5529",
+        "wheeljack-right-9586",
+        "reverse-starscream-right"
+      ]
     }
   ],
   "nameOverrides": {},
