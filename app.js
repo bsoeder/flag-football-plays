@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.20";
+const APP_VERSION = "v1.21";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -424,6 +424,7 @@ let playOverrides = loadPlayOverrides();
 let deletedBaseIds = loadDeletedBaseIds();
 let playbookSubview = "plays";
 let openPickerBookId = null;
+let openBookId = null;
 let editingPlayId = null;
 let routeOverrides = {};
 let alignmentOverrides = {};
@@ -1527,6 +1528,10 @@ function createPlaybook(name) {
 
 function deletePlaybook(id) {
   playbooks = playbooks.filter((book) => book.id !== id);
+  if (openBookId === id) {
+    openBookId = null;
+    openPickerBookId = null;
+  }
   persistPlaybooks();
   renderPlaybooks();
   refreshFullscreenPlaybookOptions();
@@ -1564,6 +1569,24 @@ function renderPlaybookSubview() {
   });
 }
 
+// Reorder a play within a book by swapping it with its neighbour (direction -1 up, +1 down).
+function movePlayInPlaybook(bookId, playId, direction) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book) {
+    return;
+  }
+  const index = book.playIds.indexOf(playId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= book.playIds.length) {
+    return;
+  }
+  const ids = book.playIds.slice();
+  [ids[index], ids[target]] = [ids[target], ids[index]];
+  book.playIds = ids;
+  persistPlaybooks();
+  renderPlaybooks();
+}
+
 function renderPlaybooks() {
   if (!playbooksList) {
     return;
@@ -1574,58 +1597,119 @@ function renderPlaybooks() {
     return;
   }
 
-  playbooksList.innerHTML = playbooks
-    .map((book) => {
-      const plays = book.playIds.map(findAnyPlay).filter(Boolean);
-      const playRows = plays.length === 0
-        ? '<p class="field-help">No plays yet — use “Add plays”.</p>'
-        : plays
-            .map(
-              (play) => `
-                <div class="book-play" data-open-play="${escapeHtml(play.id)}" role="button" tabindex="0">
-                  <span class="book-play-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
-                  <span class="book-play-name">${escapeHtml(displayName(play))}</span>
-                  <button class="book-remove" type="button" data-remove="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Remove ${escapeHtml(displayName(play))}">✕</button>
-                </div>
-              `,
-            )
-            .join("");
+  const openBook = openBookId ? playbooks.find((book) => book.id === openBookId) : null;
+  if (!openBook) {
+    openBookId = null;
+    renderFolderGrid();
+    return;
+  }
+  renderOpenBook(openBook);
+}
 
-      return `
-        <section class="book-card" data-book="${escapeHtml(book.id)}">
-          <div class="book-header">
-            <div>
-              <strong>${escapeHtml(book.name)}</strong>
-              <div class="book-meta">${plays.length} play${plays.length === 1 ? "" : "s"}</div>
+// Default playbook view: a grid of folder tiles, one per playbook.
+function renderFolderGrid() {
+  playbooksList.innerHTML =
+    '<div class="folder-grid">' +
+    playbooks
+      .map((book) => {
+        const count = book.playIds.map(findAnyPlay).filter(Boolean).length;
+        return `
+          <button class="folder-tile" type="button" data-open-book="${escapeHtml(book.id)}">
+            <span class="folder-icon" aria-hidden="true">📁</span>
+            <span class="folder-name">${escapeHtml(book.name)}</span>
+            <span class="folder-count">${count} play${count === 1 ? "" : "s"}</span>
+          </button>
+        `;
+      })
+      .join("") +
+    "</div>";
+
+  playbooksList.querySelectorAll("[data-open-book]").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      openBookId = tile.dataset.openBook;
+      openPickerBookId = null;
+      renderPlaybooks();
+    });
+  });
+}
+
+// Opened folder: the book's plays with reorder / remove / add controls.
+function renderOpenBook(book) {
+  const plays = book.playIds.map(findAnyPlay).filter(Boolean);
+  const playRows = plays.length === 0
+    ? '<p class="field-help">No plays yet — use “Add plays”.</p>'
+    : plays
+        .map(
+          (play, index) => `
+            <div class="book-play" data-open-play="${escapeHtml(play.id)}" role="button" tabindex="0">
+              <span class="book-play-order">
+                <button class="book-move" type="button" data-move-up="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Move up"${index === 0 ? " disabled" : ""}>▲</button>
+                <button class="book-move" type="button" data-move-down="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Move down"${index === plays.length - 1 ? " disabled" : ""}>▼</button>
+              </span>
+              <span class="book-play-code">${escapeHtml(normalizeSnapshot(play).code)}</span>
+              <span class="book-play-name">${escapeHtml(displayName(play))}</span>
+              <button class="book-remove" type="button" data-remove="${escapeHtml(book.id)}:${escapeHtml(play.id)}" aria-label="Remove ${escapeHtml(displayName(play))}">✕</button>
             </div>
-            <div class="book-actions">
-              <button class="secondary-button book-add-toggle" type="button" data-add-toggle="${escapeHtml(book.id)}">Add plays</button>
-              <button class="secondary-button" type="button" data-export-book="${escapeHtml(book.id)}">Export PPTX</button>
-              <button class="secondary-button book-delete" type="button" data-delete-book="${escapeHtml(book.id)}">Delete</button>
-            </div>
-          </div>
-          <div class="book-play-list">${playRows}</div>
-          <div class="book-picker is-hidden" data-picker="${escapeHtml(book.id)}"></div>
-        </section>
-      `;
-    })
-    .join("");
+          `,
+        )
+        .join("");
+
+  playbooksList.innerHTML = `
+    <section class="book-card is-open" data-book="${escapeHtml(book.id)}">
+      <button class="secondary-button book-back" type="button" data-back-to-folders>← All playbooks</button>
+      <div class="book-header">
+        <div>
+          <strong>${escapeHtml(book.name)}</strong>
+          <div class="book-meta">${plays.length} play${plays.length === 1 ? "" : "s"}</div>
+        </div>
+        <div class="book-actions">
+          <button class="secondary-button book-add-toggle" type="button" data-add-toggle="${escapeHtml(book.id)}">Add plays</button>
+          <button class="secondary-button" type="button" data-export-book="${escapeHtml(book.id)}">Export PPTX</button>
+          <button class="secondary-button book-delete" type="button" data-delete-book="${escapeHtml(book.id)}">Delete</button>
+        </div>
+      </div>
+      <div class="book-play-list">${playRows}</div>
+      <div class="book-picker is-hidden" data-picker="${escapeHtml(book.id)}"></div>
+    </section>
+  `;
 
   bindPlaybookListEvents();
 
   // Keep an open "Add plays" picker open across adds so several plays can be added in a row.
-  if (openPickerBookId) {
-    const picker = playbooksList.querySelector(`[data-picker="${openPickerBookId}"]`);
+  if (openPickerBookId === book.id) {
+    const picker = playbooksList.querySelector(`[data-picker="${book.id}"]`);
     if (picker) {
-      renderBookPicker(picker, openPickerBookId);
+      renderBookPicker(picker, book.id);
       picker.classList.remove("is-hidden");
-    } else {
-      openPickerBookId = null;
     }
   }
 }
 
 function bindPlaybookListEvents() {
+  playbooksList.querySelectorAll("[data-back-to-folders]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openBookId = null;
+      openPickerBookId = null;
+      renderPlaybooks();
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-move-up]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const [bookId, playId] = button.dataset.moveUp.split(":");
+      movePlayInPlaybook(bookId, playId, -1);
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-move-down]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const [bookId, playId] = button.dataset.moveDown.split(":");
+      movePlayInPlaybook(bookId, playId, 1);
+    });
+  });
+
   playbooksList.querySelectorAll("[data-delete-book]").forEach((button) => {
     button.addEventListener("click", () => deletePlaybook(button.dataset.deleteBook));
   });
