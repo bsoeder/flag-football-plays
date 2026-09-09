@@ -1052,6 +1052,55 @@ body.is-fullscreen-open {
   margin-top: 8px;
 }
 
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.folder-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 20px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(19, 42, 30, 0.1);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.folder-tile:hover {
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-2px);
+}
+
+.folder-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.folder-name {
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  letter-spacing: 0.03em;
+  font-size: 1.05rem;
+}
+
+.folder-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.book-back {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
 .book-card {
   padding: 16px;
   border-radius: 20px;
@@ -1102,13 +1151,38 @@ body.is-fullscreen-open {
 
 .book-play {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto 1fr auto;
   gap: 10px;
   align-items: center;
   padding: 9px 12px;
   border-radius: 14px;
   background: var(--surface-soft);
   cursor: pointer;
+}
+
+.book-play-order {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.book-move {
+  padding: 0 7px;
+  line-height: 1.35;
+  font-size: 0.8rem;
+  background: rgba(19, 42, 30, 0.12);
+  color: var(--text);
+  border-radius: 7px;
+}
+
+.book-move:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff7eb;
+}
+
+.book-move:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .book-play:hover {
