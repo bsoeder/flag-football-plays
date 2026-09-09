@@ -201,6 +201,66 @@
         "disciples-08-motion-out-pass",
         "disciples-10-counter-screen-trips"
       ]
+    },
+    {
+      "id": "book-opening-script",
+      "name": "Opening Script",
+      "playIds": [
+        "optimus-prime-2222",
+        "bunch-pass-5529",
+        "trips-right-8636",
+        "wheeljack-right-9586"
+      ]
+    },
+    {
+      "id": "book-red-zone",
+      "name": "Red Zone",
+      "playIds": [
+        "bunch-6206",
+        "bunch-6208",
+        "bunch-7671",
+        "bunch-2627"
+      ]
+    },
+    {
+      "id": "book-option-series",
+      "name": "Option Series",
+      "playIds": [
+        "option-left-5224",
+        "option-right-2523",
+        "tictactoe-right-91option1",
+        "disciples-11-rpo-qb-counter-sprint-right"
+      ]
+    },
+    {
+      "id": "book-trick-series",
+      "name": "Trick Series",
+      "playIds": [
+        "starscream-left",
+        "reverse-starscream-right",
+        "bunch-uno-run6fake5",
+        "tictactoe-motion-8fakefake1"
+      ]
+    },
+    {
+      "id": "book-script-trick-a",
+      "name": "Script & Trick A",
+      "playIds": [
+        "optimus-prime-2222",
+        "trips-right-8636",
+        "wheeljack-right-9586",
+        "starscream-left"
+      ]
+    },
+    {
+      "id": "book-script-trick-b",
+      "name": "Script & Trick B",
+      "playIds": [
+        "optimus-prime-2222",
+        "bunch-pass-5529",
+        "wheeljack-right-9586",
+        "reverse-starscream-right"
+      ]
     }
   ],
   "nameOverrides": {},
