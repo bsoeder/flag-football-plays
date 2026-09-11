@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.23";
+const APP_VERSION = "v1.24";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -418,6 +418,7 @@ const nameOverridesKey = "flag-football-name-overrides";
 const playOverridesKey = "flag-football-play-overrides";
 const deletedBaseKey = "flag-football-deleted-base";
 const rosterKey = "flag-football-roster";
+const offensivePositions = ["QB", "C", "X", "Y", "Z"];
 const svgMime = "image/svg+xml";
 const pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
@@ -1424,6 +1425,7 @@ function loadRoster() {
         id: player.id || createId("player"),
         name: player.name,
         line: player.line === 2 ? 2 : 1,
+        position: offensivePositions.includes(player.position) ? player.position : "",
       }));
   } catch {
     return [];
@@ -1439,9 +1441,18 @@ function addRosterPlayer(name, line) {
   if (!clean) {
     return;
   }
-  roster.push({ id: createId("player"), name: clean, line: line === 2 ? 2 : 1 });
+  roster.push({ id: createId("player"), name: clean, line: line === 2 ? 2 : 1, position: "" });
   persistRoster();
   renderRoster();
+}
+
+function setRosterPosition(id, position) {
+  const player = roster.find((entry) => entry.id === id);
+  if (!player) {
+    return;
+  }
+  player.position = offensivePositions.includes(position) ? position : "";
+  persistRoster();
 }
 
 function moveRosterPlayer(id) {
@@ -1476,6 +1487,12 @@ function renderRoster() {
               <div class="roster-player">
                 <span class="roster-player-name">${escapeHtml(player.name)}</span>
                 <span class="roster-player-actions">
+                  <select class="roster-position" data-position-player="${escapeHtml(player.id)}" aria-label="Offensive position for ${escapeHtml(player.name)}">
+                    <option value=""${player.position ? "" : " selected"}>Pos</option>
+                    ${offensivePositions
+                      .map((pos) => `<option value="${pos}"${player.position === pos ? " selected" : ""}>${pos}</option>`)
+                      .join("")}
+                  </select>
                   <button class="secondary-button roster-move" type="button" data-move-player="${escapeHtml(player.id)}" aria-label="Move ${escapeHtml(player.name)} to Line ${otherLine}">→ L${otherLine}</button>
                   <button class="book-remove" type="button" data-remove-player="${escapeHtml(player.id)}" aria-label="Remove ${escapeHtml(player.name)}">✕</button>
                 </span>
@@ -1496,6 +1513,9 @@ function renderRoster() {
 
   rosterLines.innerHTML = column(1) + column(2);
 
+  rosterLines.querySelectorAll("[data-position-player]").forEach((select) => {
+    select.addEventListener("change", () => setRosterPosition(select.dataset.positionPlayer, select.value));
+  });
   rosterLines.querySelectorAll("[data-move-player]").forEach((button) => {
     button.addEventListener("click", () => moveRosterPlayer(button.dataset.movePlayer));
   });
@@ -1737,21 +1757,59 @@ function renderFolderGrid() {
       .map((book) => {
         const count = book.playIds.map(findAnyPlay).filter(Boolean).length;
         return `
-          <button class="folder-tile" type="button" data-open-book="${escapeHtml(book.id)}">
+          <div class="folder-tile" data-open-book="${escapeHtml(book.id)}" role="button" tabindex="0">
+            <div class="folder-tile-actions">
+              <button class="folder-tile-btn" type="button" data-rename-book-grid="${escapeHtml(book.id)}" aria-label="Rename ${escapeHtml(book.name)}" title="Rename">✎</button>
+              <button class="folder-tile-btn" type="button" data-delete-book-grid="${escapeHtml(book.id)}" aria-label="Delete ${escapeHtml(book.name)}" title="Delete">✕</button>
+            </div>
             <span class="folder-icon" aria-hidden="true">📁</span>
             <span class="folder-name">${escapeHtml(book.name)}</span>
             <span class="folder-count">${count} play${count === 1 ? "" : "s"}</span>
-          </button>
+          </div>
         `;
       })
       .join("") +
     "</div>";
 
   playbooksList.querySelectorAll("[data-open-book]").forEach((tile) => {
-    tile.addEventListener("click", () => {
+    const open = () => {
       openBookId = tile.dataset.openBook;
       openPickerBookId = null;
       renderPlaybooks();
+    };
+    tile.addEventListener("click", open);
+    tile.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-rename-book-grid]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const book = playbooks.find((entry) => entry.id === button.dataset.renameBookGrid);
+      if (!book) {
+        return;
+      }
+      const name = window.prompt("Rename playbook", book.name);
+      if (name !== null) {
+        renamePlaybook(book.id, name);
+      }
+    });
+  });
+
+  playbooksList.querySelectorAll("[data-delete-book-grid]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const book = playbooks.find((entry) => entry.id === button.dataset.deleteBookGrid);
+      if (!book) {
+        return;
+      }
+      if (window.confirm(`Delete the “${book.name}” playbook?`)) {
+        deletePlaybook(book.id);
+      }
     });
   });
 }

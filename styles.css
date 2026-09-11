@@ -1110,6 +1110,12 @@ body.is-fullscreen-open {
   font-size: 0.85rem;
 }
 
+.roster-position {
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -1118,6 +1124,7 @@ body.is-fullscreen-open {
 }
 
 .folder-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1130,6 +1137,27 @@ body.is-fullscreen-open {
   color: var(--text);
   cursor: pointer;
   transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.folder-tile-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.folder-tile-btn {
+  padding: 3px 7px;
+  font-size: 0.8rem;
+  background: rgba(19, 42, 30, 0.12);
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.folder-tile-btn:hover {
+  background: var(--accent);
+  color: #fff7eb;
 }
 
 .folder-tile:hover {
