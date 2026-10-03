@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.26";
+const APP_VERSION = "v1.27";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -1845,7 +1845,7 @@ function renderOpenBook(book) {
         </div>
         <div class="book-actions">
           <button class="secondary-button book-add-toggle" type="button" data-add-toggle="${escapeHtml(book.id)}">Add plays</button>
-          <button class="secondary-button" type="button" data-sheet-book="${escapeHtml(book.id)}">Export Sheet</button>
+          <button class="secondary-button" type="button" data-sheet-book="${escapeHtml(book.id)}">Export PDF</button>
           <button class="secondary-button" type="button" data-export-book="${escapeHtml(book.id)}">Export PPTX</button>
           <button class="secondary-button book-delete" type="button" data-delete-book="${escapeHtml(book.id)}">Delete</button>
         </div>
@@ -2473,7 +2473,7 @@ function appendArrowMarker(defs, id, fill) {
   defs.appendChild(marker);
 }
 
-function drawFieldBase(target) {
+function drawFieldBase(target, light = false) {
   const defs = createSvgElement("defs");
   const fieldGradient = createSvgElement("linearGradient", {
     id: "field-gradient",
@@ -2496,18 +2496,25 @@ function drawFieldBase(target) {
   );
   defs.appendChild(fieldGradient);
   appendArrowMarker(defs, "arrowhead-route", "#ffeb7a");
+  appendArrowMarker(defs, "arrowhead-route-dark", "#1b2431");
   appendArrowMarker(defs, "arrowhead-run", conceptColors.run);
   appendArrowMarker(defs, "arrowhead-fake", conceptColors.fake);
   appendArrowMarker(defs, "arrowhead-option", conceptColors.option);
   appendArrowMarker(defs, "arrowhead-qb", playerColors.q);
   target.appendChild(defs);
+
+  // Light mode (for print/PDF export): white field with faint dark lines.
+  const lineStrong = light ? "rgba(19,42,30,0.28)" : "rgba(255,255,255,0.18)";
+  const lineSoft = light ? "rgba(19,42,30,0.14)" : "rgba(255,255,255,0.12)";
+  const losStroke = light ? "rgba(19,42,30,0.5)" : "rgba(255,255,255,0.45)";
+
   target.appendChild(
     createSvgElement("rect", {
       x: 0,
       y: 0,
       width: 1000,
       height: 600,
-      fill: "url(#field-gradient)",
+      fill: light ? "#ffffff" : "url(#field-gradient)",
     }),
   );
 
@@ -2518,7 +2525,7 @@ function drawFieldBase(target) {
         y1: 0,
         x2: yard * 100,
         y2: 600,
-        stroke: "rgba(255,255,255,0.18)",
+        stroke: lineStrong,
         "stroke-width": yard % 5 === 0 ? 4 : 2,
       }),
     );
@@ -2531,7 +2538,7 @@ function drawFieldBase(target) {
         y1: stripe * 100,
         x2: 1000,
         y2: stripe * 100,
-        stroke: "rgba(255,255,255,0.12)",
+        stroke: lineSoft,
         "stroke-width": 2,
       }),
     );
@@ -2543,7 +2550,7 @@ function drawFieldBase(target) {
       y1: 410,
       x2: 1000,
       y2: 410,
-      stroke: "rgba(255,255,255,0.45)",
+      stroke: losStroke,
       "stroke-width": 4,
       "stroke-dasharray": "12 10",
     }),
@@ -2734,9 +2741,13 @@ function getOffensePositions(snapshot, progress) {
   return positions;
 }
 
-function drawRoutes(target, snapshot) {
+function drawRoutes(target, snapshot, light = false) {
   const alignment = getSnapshotAlignment(snapshot);
   const preSnapMotion = getPreSnapMotionPath(snapshot);
+  // On the light (print) field, yellow routes wash out — use a dark stroke instead.
+  const routeStroke = light ? "#1b2431" : "#ffeb7a";
+  const routeMarker = light ? "arrowhead-route-dark" : "arrowhead-route";
+  const snapStroke = light ? "rgba(19,42,30,0.55)" : "rgba(255,255,255,0.75)";
 
   if (preSnapMotion) {
     drawStyledPath(target, preSnapMotion, {
@@ -2753,7 +2764,7 @@ function drawRoutes(target, snapshot) {
     if (isRunRoute(routeCodeForPlayer(snapshot, player))) {
       // Handoff / pitch line from the QB to the ball carrier, then the run path in green.
       drawStyledPath(target, [[alignment.q.x, alignment.q.y], [points[0][0], points[0][1]]], {
-        stroke: "rgba(255,255,255,0.75)",
+        stroke: snapStroke,
         width: 3,
         dasharray: "10 8",
       });
@@ -2766,22 +2777,22 @@ function drawRoutes(target, snapshot) {
       createSvgElement("path", {
         d: buildPath(points),
         fill: "none",
-        stroke: "#ffeb7a",
+        stroke: routeStroke,
         "stroke-width": 11,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "stroke-opacity": "0.15",
+        "stroke-opacity": light ? "0.1" : "0.15",
       }),
     );
     target.appendChild(
       createSvgElement("path", {
         d: buildPath(points),
         fill: "none",
-        stroke: "#ffeb7a",
+        stroke: routeStroke,
         "stroke-width": 6,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
-        "marker-end": "url(#arrowhead-route)",
+        "marker-end": `url(#${routeMarker})`,
       }),
     );
   });
@@ -2790,7 +2801,7 @@ function drawRoutes(target, snapshot) {
     createSvgElement("path", {
       d: `M ${alignment.c.x} ${alignment.c.y + 6} L ${alignment.q.x} ${alignment.q.y - 18}`,
       fill: "none",
-      stroke: "rgba(255,255,255,0.7)",
+      stroke: snapStroke,
       "stroke-width": 3,
       "stroke-dasharray": "10 8",
     }),
@@ -3097,12 +3108,14 @@ function drawRouteHandles(target, snapshot) {
   });
 }
 
-function drawPlayers(target, snapshot, positions, interactive = false) {
+function drawPlayers(target, snapshot, positions, interactive = false, light = false) {
   const alignment = getSnapshotAlignment(snapshot);
   const routeMap = { x: snapshot.code[0], y: snapshot.code[1], z: snapshot.code[2], c: snapshot.code[3], q: "QB" };
   const currentPositions = positions || alignment;
   const ballCarrier = firstTouchPlayer(snapshot, alignment);
   const carrierColor = normalizePlayType(snapshot.type) === "pass" ? conceptColors.run : "#ffd23f";
+  const ringStroke = light ? "rgba(19,42,30,0.35)" : "rgba(255,255,255,0.9)";
+  const tagFill = light ? "#1b2431" : "#fff7eb";
 
   Object.entries(currentPositions).forEach(([player, position]) => {
     // Highlight the player running with the ball with a colored ring behind their marker.
@@ -3125,7 +3138,7 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
       cy: position.y,
       r: player === "q" ? 30 : 28,
       fill: playerColors[player],
-      stroke: "rgba(255,255,255,0.9)",
+      stroke: ringStroke,
       "stroke-width": 5,
     };
     if (interactive) {
@@ -3165,7 +3178,7 @@ function drawPlayers(target, snapshot, positions, interactive = false) {
       "font-family": "Avenir Next, Trebuchet MS, sans-serif",
       "font-size": "24",
       "font-weight": "700",
-      fill: "#fff7eb",
+      fill: tagFill,
       "pointer-events": "none",
     });
     tag.textContent = player === "q" ? "snap / drop" : routeTagText(routeMap[player]);
@@ -3199,23 +3212,23 @@ function drawDefense(target, defense, offensePositions, progress) {
   });
 }
 
-function renderField(target, snapshot, simulation = null) {
+function renderField(target, snapshot, simulation = null, light = false) {
   const viewport = target === fieldSvg ? fieldViewport : createDefaultViewport();
   target.setAttribute("viewBox", formatViewBox(viewport));
   clearSvg(target);
-  drawFieldBase(target);
-  drawRoutes(target, snapshot);
+  drawFieldBase(target, light);
+  drawRoutes(target, snapshot, light);
   drawConcepts(target, snapshot);
 
   if (simulation) {
     const offensePositions = getOffensePositions(snapshot, simulation.progress);
     drawDefense(target, simulation.defense, offensePositions, simulation.progress);
-    drawPlayers(target, snapshot, offensePositions);
+    drawPlayers(target, snapshot, offensePositions, false, light);
     return;
   }
 
   const interactive = target === fieldSvg && activeMode === "compose";
-  drawPlayers(target, snapshot, undefined, interactive);
+  drawPlayers(target, snapshot, undefined, interactive, light);
   if (interactive) {
     drawRouteHandles(target, snapshot);
   }
@@ -3955,88 +3968,35 @@ function buildExportSvg(snapshot, options = {}) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(tempSvg)}`;
 }
 
-// Lay a set of plays onto one printable sheet: a grid of numbered cells, each with a
-// black header (number + play name) above the play's field diagram — a call-sheet.
-function buildSheetSvg(entries, sheetTitle) {
-  const cols = entries.length <= 1 ? 1 : entries.length <= 4 ? 2 : 3;
-  const rows = Math.ceil(entries.length / cols);
-  const margin = 24;
-  const gap = 12;
-  const titleBarH = 54;
-  const pageW = 1224;
-  const cellW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
-  const cellTitleH = 32;
-  const fieldH = cellW * 0.6; // field viewBox is 1000 x 600
-  const cellH = cellTitleH + fieldH;
-  const pageH = margin * 2 + titleBarH + rows * cellH + gap * Math.max(0, rows - 1);
-
+// A single play's field diagram as inline SVG markup on a white (print) field.
+function buildPlayFieldSvg(snapshot) {
   const svg = createSvgElement("svg", {
     xmlns: svgNs,
-    viewBox: `0 0 ${pageW} ${Math.round(pageH)}`,
-    width: pageW,
-    height: Math.round(pageH),
+    viewBox: "0 0 1000 600",
+    preserveAspectRatio: "xMidYMid meet",
   });
-  svg.appendChild(createSvgElement("rect", { x: 0, y: 0, width: pageW, height: Math.round(pageH), fill: "#ffffff" }));
-
-  const heading = createSvgElement("text", {
-    x: margin,
-    y: margin + 34,
-    fill: "#1b2431",
-    "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
-    "font-size": "34",
-  });
-  heading.textContent = sheetTitle;
-  svg.appendChild(heading);
-
-  entries.forEach((entry, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const x = margin + col * (cellW + gap);
-    const y = margin + titleBarH + row * (cellH + gap);
-
-    svg.appendChild(createSvgElement("rect", { x, y, width: cellW, height: cellTitleH, fill: "#1b2431" }));
-    const num = createSvgElement("text", {
-      x: x + 12,
-      y: y + 22,
-      fill: "#9ad87c",
-      "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
-      "font-size": "18",
-    });
-    num.textContent = String(index + 1);
-    svg.appendChild(num);
-
-    const name = createSvgElement("text", {
-      x: x + cellW / 2,
-      y: y + 22,
-      "text-anchor": "middle",
-      fill: "#fff7eb",
-      "font-family": "Avenir Next, Trebuchet MS, sans-serif",
-      "font-size": "16",
-      "font-weight": "700",
-    });
-    const label = entry.name.length > 30 ? `${entry.name.slice(0, 29)}…` : entry.name;
-    name.textContent = label;
-    svg.appendChild(name);
-
-    const cell = createSvgElement("svg", {
-      x,
-      y: y + cellTitleH,
-      width: cellW,
-      height: fieldH,
-      viewBox: "0 0 1000 600",
-      preserveAspectRatio: "xMidYMid meet",
-    });
-    renderField(cell, entry.snapshot);
-    svg.appendChild(cell);
-
-    svg.appendChild(
-      createSvgElement("rect", { x, y, width: cellW, height: cellH, fill: "none", stroke: "#1b2431", "stroke-width": 1.5 }),
-    );
-  });
-
-  return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+  renderField(svg, snapshot, null, true);
+  return new XMLSerializer().serializeToString(svg);
 }
 
+const sheetPrintCss = `
+  @page { size: letter portrait; margin: 0.4in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Avenir Next", "Trebuchet MS", Arial, sans-serif; color: #1b2431; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .cell { border: 1px solid #1b2431; border-radius: 5px; overflow: hidden; break-inside: avoid; }
+  .cell-head { background: #1b2431; color: #fff7eb; display: flex; gap: 6px; align-items: baseline; padding: 3px 7px; font-size: 10px; font-weight: 700; }
+  .cell-head .num { color: #9ad87c; }
+  .cell-head .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell-field { position: relative; width: 100%; padding-bottom: 60%; }
+  .cell-field svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #fff; }
+  @media screen { body { background: #e9edf0; padding: 16px; } .page { background: #fff; max-width: 8.5in; margin: 0 auto 16px; padding: 0.4in; box-shadow: 0 2px 12px rgba(0,0,0,0.15); } }
+`;
+
+// Export a playbook as a printable PDF (via the browser print dialog), 3×5 = 15 plays per page.
 function exportPlaybookSheet(bookId) {
   const book = playbooks.find((entry) => entry.id === bookId);
   if (!book) {
@@ -4050,8 +4010,47 @@ function exportPlaybookSheet(bookId) {
     setSimulationStatus("Add plays to the playbook before exporting.");
     return;
   }
-  const markup = buildSheetSvg(entries, book.name);
-  downloadBlob(new Blob([markup], { type: svgMime }), `${safeExportName(book.name)}-sheet.svg`);
+
+  const perPage = 15; // 3 columns × 5 rows
+  let number = 0;
+  const pages = [];
+  for (let i = 0; i < entries.length; i += perPage) {
+    const cells = entries
+      .slice(i, i + perPage)
+      .map((entry) => {
+        number += 1;
+        return `
+          <div class="cell">
+            <div class="cell-head"><span class="num">${number}</span><span class="name">${escapeHtml(entry.name)}</span></div>
+            <div class="cell-field">${buildPlayFieldSvg(entry.snapshot)}</div>
+          </div>`;
+      })
+      .join("");
+    pages.push(`<section class="page"><div class="grid">${cells}</div></section>`);
+  }
+
+  const docHtml = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(book.name)}</title><style>${sheetPrintCss}</style></head><body>${pages.join("")}</body></html>`;
+  const win = window.open("", "_blank");
+  if (!win) {
+    setSimulationStatus("Allow pop-ups to export the sheet to PDF.");
+    return;
+  }
+  win.document.open();
+  win.document.write(docHtml);
+  win.document.close();
+  let printed = false;
+  const triggerPrint = () => {
+    if (printed) {
+      return;
+    }
+    printed = true;
+    win.focus();
+    win.print();
+  };
+  win.addEventListener("load", triggerPrint);
+  // Inline SVG has no external resources, so a short fallback covers write() windows
+  // where the load event has already fired.
+  setTimeout(triggerPrint, 500);
 }
 
 function copyTextFallback(value) {
