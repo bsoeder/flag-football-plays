@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.25";
+const APP_VERSION = "v1.26";
 
 const routeTree = {
   0: "Step-forward screen",
