@@ -1,5 +1,5 @@
 // App version — shown in the header. Bump alongside the service worker cache.
-const APP_VERSION = "v1.24";
+const APP_VERSION = "v1.25";
 
 const routeTree = {
   0: "Step-forward screen",
@@ -1845,6 +1845,7 @@ function renderOpenBook(book) {
         </div>
         <div class="book-actions">
           <button class="secondary-button book-add-toggle" type="button" data-add-toggle="${escapeHtml(book.id)}">Add plays</button>
+          <button class="secondary-button" type="button" data-sheet-book="${escapeHtml(book.id)}">Export Sheet</button>
           <button class="secondary-button" type="button" data-export-book="${escapeHtml(book.id)}">Export PPTX</button>
           <button class="secondary-button book-delete" type="button" data-delete-book="${escapeHtml(book.id)}">Delete</button>
         </div>
@@ -1907,6 +1908,10 @@ function bindPlaybookListEvents() {
 
   playbooksList.querySelectorAll("[data-export-book]").forEach((button) => {
     button.addEventListener("click", () => exportPlaybook(button.dataset.exportBook));
+  });
+
+  playbooksList.querySelectorAll("[data-sheet-book]").forEach((button) => {
+    button.addEventListener("click", () => exportPlaybookSheet(button.dataset.sheetBook));
   });
 
   playbooksList.querySelectorAll("[data-remove]").forEach((button) => {
@@ -3948,6 +3953,105 @@ function buildExportSvg(snapshot, options = {}) {
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(tempSvg)}`;
+}
+
+// Lay a set of plays onto one printable sheet: a grid of numbered cells, each with a
+// black header (number + play name) above the play's field diagram — a call-sheet.
+function buildSheetSvg(entries, sheetTitle) {
+  const cols = entries.length <= 1 ? 1 : entries.length <= 4 ? 2 : 3;
+  const rows = Math.ceil(entries.length / cols);
+  const margin = 24;
+  const gap = 12;
+  const titleBarH = 54;
+  const pageW = 1224;
+  const cellW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
+  const cellTitleH = 32;
+  const fieldH = cellW * 0.6; // field viewBox is 1000 x 600
+  const cellH = cellTitleH + fieldH;
+  const pageH = margin * 2 + titleBarH + rows * cellH + gap * Math.max(0, rows - 1);
+
+  const svg = createSvgElement("svg", {
+    xmlns: svgNs,
+    viewBox: `0 0 ${pageW} ${Math.round(pageH)}`,
+    width: pageW,
+    height: Math.round(pageH),
+  });
+  svg.appendChild(createSvgElement("rect", { x: 0, y: 0, width: pageW, height: Math.round(pageH), fill: "#ffffff" }));
+
+  const heading = createSvgElement("text", {
+    x: margin,
+    y: margin + 34,
+    fill: "#1b2431",
+    "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
+    "font-size": "34",
+  });
+  heading.textContent = sheetTitle;
+  svg.appendChild(heading);
+
+  entries.forEach((entry, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const x = margin + col * (cellW + gap);
+    const y = margin + titleBarH + row * (cellH + gap);
+
+    svg.appendChild(createSvgElement("rect", { x, y, width: cellW, height: cellTitleH, fill: "#1b2431" }));
+    const num = createSvgElement("text", {
+      x: x + 12,
+      y: y + 22,
+      fill: "#9ad87c",
+      "font-family": "Impact, Haettenschweiler, Arial Narrow Bold, sans-serif",
+      "font-size": "18",
+    });
+    num.textContent = String(index + 1);
+    svg.appendChild(num);
+
+    const name = createSvgElement("text", {
+      x: x + cellW / 2,
+      y: y + 22,
+      "text-anchor": "middle",
+      fill: "#fff7eb",
+      "font-family": "Avenir Next, Trebuchet MS, sans-serif",
+      "font-size": "16",
+      "font-weight": "700",
+    });
+    const label = entry.name.length > 30 ? `${entry.name.slice(0, 29)}…` : entry.name;
+    name.textContent = label;
+    svg.appendChild(name);
+
+    const cell = createSvgElement("svg", {
+      x,
+      y: y + cellTitleH,
+      width: cellW,
+      height: fieldH,
+      viewBox: "0 0 1000 600",
+      preserveAspectRatio: "xMidYMid meet",
+    });
+    renderField(cell, entry.snapshot);
+    svg.appendChild(cell);
+
+    svg.appendChild(
+      createSvgElement("rect", { x, y, width: cellW, height: cellH, fill: "none", stroke: "#1b2431", "stroke-width": 1.5 }),
+    );
+  });
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+}
+
+function exportPlaybookSheet(bookId) {
+  const book = playbooks.find((entry) => entry.id === bookId);
+  if (!book) {
+    return;
+  }
+  const entries = book.playIds
+    .map(findAnyPlay)
+    .filter(Boolean)
+    .map((play) => ({ name: displayName(play), snapshot: normalizeSnapshot(play) }));
+  if (entries.length === 0) {
+    setSimulationStatus("Add plays to the playbook before exporting.");
+    return;
+  }
+  const markup = buildSheetSvg(entries, book.name);
+  downloadBlob(new Blob([markup], { type: svgMime }), `${safeExportName(book.name)}-sheet.svg`);
 }
 
 function copyTextFallback(value) {
